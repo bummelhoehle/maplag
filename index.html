@@ -276,7 +276,15 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       <button class="sheet-close" id="btn-radar-close">×</button>
     </div>
     <div class="sheet-body">
-      <div style="font-size:12px;color:var(--text2);margin-bottom:12px">Draws a circle around your current GPS location.</div>
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <button id="btn-radar-mode-gps" class="sh-btn hit" style="flex:1;font-size:12px">📍 GPS</button>
+        <button id="btn-radar-mode-manual" class="sh-btn ghost" style="flex:1;font-size:12px">🔍 Manual</button>
+      </div>
+      <div id="radar-manual-wrap" style="display:none;margin-bottom:12px;position:relative">
+        <input id="radar-manual-search" type="text" placeholder="Search location…" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
+        <div id="radar-manual-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:180px;overflow-y:auto"></div>
+      </div>
+      <div id="radar-gps-hint" style="font-size:12px;color:var(--text2);margin-bottom:12px">Draws a circle around your current GPS location.</div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
         <input type="number" id="radius-km" min="0.1" max="500" step="0.1" value="5" class="sh-input" style="flex:1">
         <span style="font-size:13px;color:var(--text2)">km</span>
@@ -298,6 +306,14 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       <button class="sheet-close" id="btn-meas-sheet-close">×</button>
     </div>
     <div class="sheet-body">
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button id="btn-meas-mode-gps" class="sh-btn hit" style="flex:1;font-size:12px">📍 GPS</button>
+        <button id="btn-meas-mode-manual" class="sh-btn ghost" style="flex:1;font-size:12px">🔍 Manual</button>
+      </div>
+      <div id="meas-manual-wrap" style="display:none;margin-bottom:10px;position:relative">
+        <input id="meas-manual-search" type="text" placeholder="My location…" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
+        <div id="meas-manual-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:180px;overflow-y:auto"></div>
+      </div>
       <div style="position:relative;margin-bottom:12px">
         <input id="meas-search-input" type="text" placeholder="Search location…" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
         <div id="meas-search-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:200px;overflow-y:auto"></div>
@@ -324,8 +340,29 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       <button class="sheet-close" id="btn-thermo-close">×</button>
     </div>
     <div class="sheet-body">
+      <!-- Mode toggle -->
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button id="btn-tp-mode-gps" class="sh-btn hit" style="flex:1;font-size:12px">📍 GPS</button>
+        <button id="btn-tp-mode-manual" class="sh-btn ghost" style="flex:1;font-size:12px">🔍 Manual</button>
+      </div>
+
+      <!-- Manual search inputs -->
+      <div id="tp-manual" style="display:none;margin-bottom:12px">
+        <div style="position:relative;margin-bottom:8px">
+          <input id="tp-start-search" type="text" placeholder="Start location…" autocomplete="off"
+            style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
+          <div id="tp-start-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:180px;overflow-y:auto"></div>
+        </div>
+        <div style="position:relative;margin-bottom:8px">
+          <input id="tp-stop-search" type="text" placeholder="Stop location…" autocomplete="off"
+            style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
+          <div id="tp-stop-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:180px;overflow-y:auto"></div>
+        </div>
+        <button id="btn-tp-manual-set" class="sh-btn" style="border-color:var(--gold);color:var(--gold);background:rgba(232,184,75,.1)">Set Start & Stop</button>
+      </div>
+
       <div id="tp-step-start">
-        <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7">Starte am aktuellen GPS-Standort. Bewege dich dann zu einem neuen Punkt und press <b style="color:var(--text1)">Stop</b>.</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.7">Starte am aktuellen GPS-Standort. Bewege dich dann zu einem neuen Punkt und drücke <b style="color:var(--text1)">Stop</b>.</div>
         <button id="btn-tp-start" class="sh-btn hit">📍 Start — Capture location</button>
         <div id="tp-start-info" style="display:none;margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r6);padding:10px 12px;font-size:12px;color:var(--text2)"><span style="color:var(--green)">● Start:</span> <span id="tp-start-coords"></span></div>
       </div>
@@ -879,6 +916,25 @@ function invertedCircleLayer(lat, lng, radiusM, style) {
   return layer;
 }
 
+// ── RADAR MANUAL MODE ─────────────────────────────────────
+let radarManualMode = false;
+let radarManualPos = null;
+(function(){
+  function setRadarMode(manual) {
+    radarManualMode = manual;
+    document.getElementById('btn-radar-mode-gps').className    = 'sh-btn ' + (manual ? 'ghost' : 'hit');
+    document.getElementById('btn-radar-mode-manual').className = 'sh-btn ' + (manual ? 'hit' : 'ghost');
+    document.getElementById('radar-manual-wrap').style.display = manual ? 'block' : 'none';
+    document.getElementById('radar-gps-hint').style.display    = manual ? 'none' : 'block';
+  }
+  document.getElementById('btn-radar-mode-gps').addEventListener('click', () => setRadarMode(false));
+  document.getElementById('btn-radar-mode-manual').addEventListener('click', () => setRadarMode(true));
+  makeSearch('radar-manual-search', 'radar-manual-results', pos => {
+    radarManualPos = pos;
+    document.getElementById('radar-manual-search').value = pos.name;
+  });
+})();
+
 async function drawRadar(hit) {
   const km = parseFloat(document.getElementById('radius-km').value);
   if(isNaN(km)||km<=0) return;
@@ -886,8 +942,14 @@ async function drawRadar(hit) {
   st.mode='none';
   document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
   document.getElementById('st-mode').textContent='Pan';
-  if(!locationMarker){tip('No GPS location');return;}
-  const ll=locationMarker.getLatLng();
+  let ll;
+  if (radarManualMode) {
+    if (!radarManualPos) { tip('Search for a location first'); return; }
+    ll = L.latLng(radarManualPos.lat, radarManualPos.lng);
+  } else {
+    if(!locationMarker){tip('No GPS location');return;}
+    ll=locationMarker.getLatLng();
+  }
   const radiusM = toMeters(km);
   const label = `${hit?'✓ Hit':'✗ Miss'} Radar ${km} ${unitLabel()}`;
   if (hit) {
@@ -1006,22 +1068,40 @@ function closeZonePanel() {
   document.getElementById('zone-panel').classList.remove('open');
 }
 function renderZonePanel() {
-  const n = st.zones.length;
+  const n = st.zones.length + tp.constraints.length;
   document.getElementById('zp-count').textContent = n;
   const list = document.getElementById('zone-panel-list');
   if (!n) {
     list.innerHTML = '<div class="zp-empty">No zones drawn yet.</div>';
     return;
   }
-  list.innerHTML = st.zones.map(z => `
+  const zoneHtml = st.zones.map(z => `
     <div class="zp-item">
-      <div class="zp-dot"></div>
+      <div class="zp-dot" style="background:${z.layer && z.layer._isMiss ? 'var(--red)' : 'var(--green)'}"></div>
       <div class="zp-name">${z.lbl}</div>
-      <button class="zp-del" data-id="${z.id}">🗑 Clear</button>
+      <button class="zp-del" data-id="${z.id}">× Del</button>
     </div>`).join('');
-  list.querySelectorAll('.zp-del').forEach(btn => {
+  const thermoHtml = tp.constraints.map((c, i) => {
+    const dist = Math.round(haversine(c.startPos.lat, c.startPos.lng, c.stopPos.lat, c.stopPos.lng));
+    const distStr = dist >= 1000 ? (dist/1000).toFixed(1)+'km' : dist+'m';
+    const label = c.warmer ? `Warmer (${distStr})` : `Colder (${distStr})`;
+    return `<div class="zp-item">
+      <div class="zp-dot" style="background:var(--gold)"></div>
+      <div class="zp-name">🌡 ${label}</div>
+      <button class="zp-del zp-tp-del" data-idx="${i}">× Del</button>
+    </div>`;
+  }).join('');
+  list.innerHTML = zoneHtml + (tp.constraints.length ? thermoHtml : '');
+  list.querySelectorAll('.zp-del:not(.zp-tp-del)').forEach(btn => {
     btn.addEventListener('click', () => {
       delZone(btn.dataset.id);
+      renderZonePanel();
+    });
+  });
+  list.querySelectorAll('.zp-tp-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      tp.constraints.splice(+btn.dataset.idx, 1);
+      tpRenderConstraints();
       renderZonePanel();
     });
   });
@@ -1158,42 +1238,49 @@ function tpAddMarker(lat, lng, color, label) {
 // Berechne senkrechte Halbierungslinie zwischen zwei Punkten
 // und zeichne sie auf die Karte
 function tpDrawBisector(startPos, stopPos, warmer) {
-  // Mittelpunkt der Strecke Start→Stop
   const midLat = (startPos.lat + stopPos.lat) / 2;
   const midLng = (startPos.lng + stopPos.lng) / 2;
 
-  // Richtungsvektor Start→Stop
+  // Scale longitude by cos(lat) so 1° lat ≈ 1° lng in metric space
+  const cosLat = Math.cos(midLat * Math.PI / 180);
+
   const dLat = stopPos.lat - startPos.lat;
-  const dLng = stopPos.lng - startPos.lng;
+  const dLng = (stopPos.lng - startPos.lng) * cosLat;
   const len = Math.sqrt(dLat*dLat + dLng*dLng);
 
-  // Senkrechter Vektor (normiert, ~200km lang)
-  const perpScale = 2.0;
-  const perpLat = -dLng / len * perpScale;
-  const perpLng =  dLat / len * perpScale;
+  // Perpendicular rotated 90°, same length as A→B
+  const half = len / 2;
+  const perpLat = (-dLng / len) * half;
+  const perpLng = ( dLat / len) * half / cosLat;
 
-  // Halbierungslinie
-  const bisector = L.polyline([
-    [midLat - perpLat, midLng - perpLng],
-    [midLat + perpLat, midLng + perpLng],
-  ], {
-    color: warmer ? '#f85149' : '#58a6ff',
-    weight: 3, opacity: 0.8, dashArray: '8 5'
+  const bA = [midLat - perpLat, midLng - perpLng];
+  const bB = [midLat + perpLat, midLng + perpLng];
+
+  const bisector = L.polyline([bA, bB], {
+    color: '#e8b84b', weight: 2.5, opacity: 0.9, dashArray: '8 5'
   }).addTo(map);
   tp.layers.push(bisector);
 
-  // Schattierung — warmer = Seite von Stop, cooler = Seite von Start
-  // Zeige Pfeil-Hinweis
-  const arrowPt = L.latLng(midLat + perpLat * 0.15, midLng + perpLng * 0.15);
-  const arrowMarker = L.circleMarker(arrowPt, {
-    radius: 6,
-    color: warmer ? '#f85149' : '#58a6ff',
-    fillColor: warmer ? '#f85149' : '#58a6ff',
-    fillOpacity: 0.9, weight: 2
-  }).bindTooltip(warmer ? '🔥 Hider hier' : '❄️ Hider hier',
-    {permanent: false, direction:'right'}
-  ).addTo(map);
-  tp.layers.push(arrowMarker);
+  // Warmer → hider is on Stop side → eliminate Start side
+  // Cooler → hider is on Start side → eliminate Stop side
+  const elimPos = warmer ? startPos : stopPos;
+  const eLat =  elimPos.lat - midLat;
+  const eLng = (elimPos.lng - midLng) * cosLat;
+  const eLen = Math.sqrt(eLat*eLat + eLng*eLng);
+  const elimScale = 40;
+  const edLat = (eLat / eLen) * elimScale;
+  const edLng = (eLng / eLen) * elimScale / cosLat;
+
+  const elimPoly = L.polygon([
+    bA,
+    bB,
+    [bB[0] + edLat, bB[1] + edLng],
+    [bA[0] + edLat, bA[1] + edLng],
+  ], {
+    color: '#e05252', weight: 1, opacity: 0.6,
+    fillColor: '#e05252', fillOpacity: 0.25
+  }).addTo(map);
+  tp.layers.push(elimPoly);
 }
 
 function tpRenderConstraints() {
@@ -1217,16 +1304,7 @@ function tpRenderConstraints() {
 }
 
 function tpRenderLog() {
-  const el = document.getElementById('tp-log');
-  if (!tp.log.length) { el.style.display = 'none'; return; }
-  el.style.display = 'block';
-  el.innerHTML = tp.log.map(e =>
-    `<div class="tp-log-item">
-      <div class="tp-log-dot" style="background:${e.color}"></div>
-      <span>${e.text}</span>
-    </div>`
-  ).join('');
-  el.scrollTop = el.scrollHeight;
+  // log removed
 }
 
 // START Button
@@ -1280,51 +1358,25 @@ document.getElementById('btn-tp-stop').addEventListener('click', () => {
 });
 
 // Antwort: Wärmer
-document.getElementById('btn-tp-warmer').addEventListener('click', () => {
+function tpAnswer(warmer) {
   if (!tp.startPos || !tp.stopPos) return;
-  const dist = haversine(tp.startPos.lat, tp.startPos.lng, tp.stopPos.lat, tp.stopPos.lng);
-  tp.constraints.push({startPos: {...tp.startPos}, stopPos: {...tp.stopPos}, warmer: true});
-  tp.log.push({text: `🔥 Warmer (${toDisplay(dist)} Schritt)`, color: '#f85149'});
+  tp.constraints.push({startPos: {...tp.startPos}, stopPos: {...tp.stopPos}, warmer});
   tpRenderConstraints();
-  tpRenderLog();
-  document.getElementById('tp-zone-info').style.display = 'block';
+  tp.startPos = null; tp.stopPos = null;
+  document.getElementById('thermo-panel').classList.remove('open');
+  document.getElementById('btn-thermo').classList.remove('active');
+  tp.open = false;
+}
 
-  // Next Runde: Stop wird zum neuen Start
-  tp.startPos = {...tp.stopPos};
-  tp.stopPos = null;
-  document.getElementById('tp-step-answer').style.display = 'none';
-  document.getElementById('tp-stop-info').style.display = 'none';
-  document.getElementById('tp-start-coords2').textContent =
-    `${tp.startPos.lat.toFixed(4)}, ${tp.startPos.lng.toFixed(4)}`;
-  tip('Super! Jetzt weiterbewegen → nextn Stop setzen.');
-});
-
-// Antwort: Kälter
-document.getElementById('btn-tp-cooler').addEventListener('click', () => {
-  if (!tp.startPos || !tp.stopPos) return;
-  const dist = haversine(tp.startPos.lat, tp.startPos.lng, tp.stopPos.lat, tp.stopPos.lng);
-  tp.constraints.push({startPos: {...tp.startPos}, stopPos: {...tp.stopPos}, warmer: false});
-  tp.log.push({text: `❄️ Cooler (${toDisplay(dist)} Schritt)`, color: '#58a6ff'});
-  tpRenderConstraints();
-  tpRenderLog();
-  document.getElementById('tp-zone-info').style.display = 'block';
-
-  // Next Runde: Stop wird zum neuen Start
-  tp.startPos = {...tp.stopPos};
-  tp.stopPos = null;
-  document.getElementById('tp-step-answer').style.display = 'none';
-  document.getElementById('tp-stop-info').style.display = 'none';
-  document.getElementById('tp-start-coords2').textContent =
-    `${tp.startPos.lat.toFixed(4)}, ${tp.startPos.lng.toFixed(4)}`;
-  tip('OK! Move on → set next stop.');
-});
+document.getElementById('btn-tp-warmer').addEventListener('click', () => tpAnswer(true));
+document.getElementById('btn-tp-cooler').addEventListener('click', () => tpAnswer(false));
 
 // Reset
 document.getElementById('btn-tp-reset').addEventListener('click', () => {
   tp.layers.forEach(l => map.removeLayer(l)); tp.layers = [];
   tp.markers.forEach(m => map.removeLayer(m)); tp.markers = [];
   tp.startPos = null; tp.stopPos = null;
-  tp.constraints = []; tp.log = [];
+  tp.constraints = [];
   document.getElementById('tp-step-start').querySelector('button').style.display = 'block';
   document.getElementById('tp-start-info').style.display = 'none';
   document.getElementById('tp-step-stop').style.display = 'none';
@@ -1334,6 +1386,78 @@ document.getElementById('btn-tp-reset').addEventListener('click', () => {
   document.getElementById('tp-log').innerHTML = '';
   tip('Thermometer reset');
 });
+
+// ── SHARED SEARCH HELPER ──────────────────────────────────
+function makeSearch(inputId, resultsId, onSelect) {
+  const inp = document.getElementById(inputId);
+  const res = document.getElementById(resultsId);
+  let timer = null;
+  inp.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = inp.value.trim();
+    if (q.length < 2) { res.style.display = 'none'; return; }
+    timer = setTimeout(async () => {
+      try {
+        const data = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=4&lang=${mapLang === 'local' ? 'en' : mapLang}`).then(r => r.json());
+        const features = data.features || [];
+        if (!features.length) { res.style.display = 'none'; return; }
+        res.innerHTML = features.map(f => {
+          const p = f.properties;
+          const name = [p.name, p.city, p.country].filter(Boolean).join(', ');
+          const [lng, lat] = f.geometry.coordinates;
+          return `<div class="sr-item" data-lat="${lat}" data-lng="${lng}" data-name="${name}">${name}</div>`;
+        }).join('');
+        const r2 = inp.getBoundingClientRect();
+        res.style.width = r2.width + 'px';
+        res.style.left  = r2.left + 'px';
+        res.style.bottom = (window.innerHeight - r2.top + 4) + 'px';
+        res.style.top = 'auto';
+        res.style.display = 'block';
+        res.querySelectorAll('.sr-item').forEach(el => {
+          el.addEventListener('click', () => {
+            inp.value = el.dataset.name;
+            res.style.display = 'none';
+            onSelect({ lat: parseFloat(el.dataset.lat), lng: parseFloat(el.dataset.lng), name: el.dataset.name });
+          });
+        });
+      } catch(e) { res.style.display = 'none'; }
+    }, 350);
+  });
+  document.addEventListener('click', e => { if (!inp.contains(e.target) && !res.contains(e.target)) res.style.display = 'none'; });
+}
+
+// ── THERMOMETER MANUAL MODE ───────────────────────────────
+(function(){
+  let tpManualMode = false;
+  let tpManualStart = null, tpManualStop = null;
+
+  function setMode(manual) {
+    tpManualMode = manual;
+    document.getElementById('btn-tp-mode-gps').className    = 'sh-btn ' + (manual ? 'ghost' : 'hit');
+    document.getElementById('btn-tp-mode-manual').className = 'sh-btn ' + (manual ? 'hit' : 'ghost');
+    document.getElementById('tp-manual').style.display      = manual ? 'block' : 'none';
+    document.getElementById('tp-step-start').style.display  = manual ? 'none' : 'block';
+    document.getElementById('tp-step-stop').style.display   = 'none';
+  }
+
+  document.getElementById('btn-tp-mode-gps').addEventListener('click', () => setMode(false));
+  document.getElementById('btn-tp-mode-manual').addEventListener('click', () => setMode(true));
+
+  makeSearch('tp-start-search', 'tp-start-results', pos => { tpManualStart = pos; });
+  makeSearch('tp-stop-search',  'tp-stop-results',  pos => { tpManualStop  = pos; });
+
+  document.getElementById('btn-tp-manual-set').addEventListener('click', () => {
+    if (!tpManualStart || !tpManualStop) { tip('Select both locations first'); return; }
+    tp.startPos = tpManualStart;
+    tp.stopPos  = tpManualStop;
+    tpAddMarker(tp.startPos.lat, tp.startPos.lng, '#3fb950', 'Start');
+    tpAddMarker(tp.stopPos.lat,  tp.stopPos.lng,  '#f0c040', 'Stop');
+    const dist = haversine(tp.startPos.lat, tp.startPos.lng, tp.stopPos.lat, tp.stopPos.lng);
+    map.fitBounds([[tp.startPos.lat, tp.startPos.lng],[tp.stopPos.lat, tp.stopPos.lng]], {padding:[60,60]});
+    document.getElementById('tp-step-answer').style.display = 'block';
+    tip(`${tpManualStart.name} → ${tpManualStop.name}: ${toDisplay(dist)}`);
+  });
+})();
 
 // ── MEASURING ─────────────────────────────────────────────
 function haversine(lat1, lng1, lat2, lng2) {
@@ -1353,11 +1477,31 @@ const meas = {
   refMarker: null
 };
 
+// ── MEASURING MANUAL MODE ─────────────────────────────────
+let measManualMode = false;
+(function(){
+  function setMeasMode(manual) {
+    measManualMode = manual;
+    document.getElementById('btn-meas-mode-gps').className    = 'sh-btn ' + (manual ? 'ghost' : 'hit');
+    document.getElementById('btn-meas-mode-manual').className = 'sh-btn ' + (manual ? 'hit' : 'ghost');
+    document.getElementById('meas-manual-wrap').style.display = manual ? 'block' : 'none';
+    if (!manual) measUpdateMyPos();
+  }
+  document.getElementById('btn-meas-mode-gps').addEventListener('click', () => setMeasMode(false));
+  document.getElementById('btn-meas-mode-manual').addEventListener('click', () => setMeasMode(true));
+  makeSearch('meas-manual-search', 'meas-manual-results', pos => {
+    meas.myLat = pos.lat;
+    meas.myLng = pos.lng;
+    document.getElementById('meas-manual-search').value = pos.name;
+    measRecalc();
+  });
+})();
+
 function measOpen() {
   document.getElementById('meas-sheet').classList.add('open');
   document.getElementById('btn-measuring').classList.add('active');
   // Schritt 1: Standort sofort aus GPS holen
-  measUpdateMyPos();
+  if (!measManualMode) measUpdateMyPos();
 }
 
 function measUpdateMyPos() {
@@ -1443,7 +1587,7 @@ document.getElementById('btn-meas-clear').addEventListener('click', () => {
 
 // GPS aktualisiert → Schritt 1 updaten falls Panel offen
 setInterval(() => {
-  if (document.getElementById('meas-sheet').classList.contains('open')) measUpdateMyPos();
+  if (!measManualMode && document.getElementById('meas-sheet').classList.contains('open')) measUpdateMyPos();
 }, 3000);
 
 // ── MEASURING eigene Suche ────────────────────────────────
