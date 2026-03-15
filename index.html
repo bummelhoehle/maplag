@@ -259,11 +259,17 @@ html,body{height:100%;overflow:hidden}
 <!-- MEASURING PANEL -->
 <div id="meas-box" style="display:none;position:fixed;bottom:80px;left:10px;right:10px;z-index:9500;max-width:360px;pointer-events:all">
   <div style="background:#161b22;border:2px solid #f0c040;border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.7)">
-    <div style="font-size:12px;color:#f0c040;margin-bottom:10px;font-weight:600">📏 MEASURING — Ort über 🔍 Suche wählen</div>
-    <div id="meas-selected" style="display:none;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;margin-bottom:12px">
-      <div id="meas-selected-name" style="font-size:14px;font-weight:600;color:#e6edf3"></div>
-      <div id="meas-selected-dist" style="font-size:12px;color:#8b949e;margin-top:3px"></div>
-    </div>
+    <div style="font-size:12px;color:#f0c040;font-weight:600;margin-bottom:12px">📏 MEASURING</div>
+
+    <div style="font-size:12px;color:#8b949e;margin-bottom:6px">Schritt 1 — Dein Standort:</div>
+    <div id="meas-step1" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#6e7681">Wird ermittelt…</div>
+
+    <div style="font-size:12px;color:#8b949e;margin-bottom:6px">Schritt 2 — Ort wählen über 🔍 Suche:</div>
+    <div id="meas-step2" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:#6e7681">Noch kein Ort gewählt</div>
+
+    <div style="font-size:12px;color:#8b949e;margin-bottom:6px">Schritt 3 — Distanz (Radius):</div>
+    <div id="meas-step3" style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;color:#6e7681">—</div>
+
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <button id="btn-meas-green" style="flex:1;padding:13px;border-radius:10px;border:1px solid #3fb950;background:rgba(63,185,80,.08);color:#3fb950;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✓ Näher</button>
       <button id="btn-meas-red" style="flex:1;padding:13px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.08);color:#f85149;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✗ Weiter</button>
@@ -275,6 +281,8 @@ html,body{height:100%;overflow:hidden}
     </div>
   </div>
 </div>
+
+
 
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1117,80 +1125,111 @@ document.getElementById('btn-tp-reset').addEventListener('click', () => {
 });
 
 // ── MEASURING ─────────────────────────────────────────────
-const measState = { circles: [], refMarker: null };
+// Schritt 1: Standort, Schritt 2: Ort, Schritt 3: Distanz, Schritt 4: Kreis
 
-// Toggle panel
-document.getElementById('btn-measuring').addEventListener('click', () => {
-  const box = document.getElementById('meas-box');
-  const open = box.style.display === 'none';
-  box.style.display = open ? 'block' : 'none';
-  document.getElementById('btn-measuring').classList.toggle('active', open);
-});
+const meas = {
+  myLat: null, myLng: null,   // Schritt 1
+  refLat: null, refLng: null, refName: null, // Schritt 2
+  radius: null,                // Schritt 3
+  circles: [],
+  refMarker: null
+};
 
-document.getElementById('btn-meas-close').addEventListener('click', () => {
-  document.getElementById('meas-box').style.display = 'none';
-  document.getElementById('btn-measuring').classList.remove('active');
-});
-
-// Called from existing search when Measuring is active
-function measSelectFromSearch(lat, lng, name) {
-  measState.refLat = lat;
-  measState.refLng = lng;
-  if (measState.refMarker) map.removeLayer(measState.refMarker);
-  measState.refMarker = L.circleMarker([lat, lng], {
-    radius: 10, color: '#fff', fillColor: '#f0c040', fillOpacity: 1, weight: 2.5
-  }).bindTooltip(name, {permanent: false, direction: 'top'}).addTo(map);
-  map.setView([lat, lng], 10);
-  let distText = 'Kein GPS — Radius wird auf 50km gesetzt';
-  measState.dist = 50000; // default 50km falls kein GPS
-  if (locationMarker) {
-    const ll = locationMarker.getLatLng();
-    measState.dist = haversine(ll.lat, ll.lng, lat, lng);
-    distText = 'Deine Distanz: ' + (measState.dist / 1000).toFixed(1) + ' km';
-  }
-  document.getElementById('meas-selected').style.display = 'block';
-  document.getElementById('meas-selected-name').textContent = name;
-  document.getElementById('meas-selected-dist').textContent = distText;
-  // Buttons aktivieren — removeAttribute statt disabled=false
-  const g = document.getElementById('btn-meas-green');
-  const r = document.getElementById('btn-meas-red');
-  g.removeAttribute('disabled'); g.style.opacity = '1'; g.style.cursor = 'pointer';
-  r.removeAttribute('disabled'); r.style.opacity = '1'; r.style.cursor = 'pointer';
+function measOpen() {
+  document.getElementById('meas-box').style.display = 'block';
+  document.getElementById('btn-measuring').classList.add('active');
+  // Schritt 1: Standort sofort aus GPS holen
+  measUpdateMyPos();
 }
 
+function measUpdateMyPos() {
+  if (locationMarker) {
+    const ll = locationMarker.getLatLng();
+    meas.myLat = ll.lat;
+    meas.myLng = ll.lng;
+    document.getElementById('meas-step1').textContent = ll.lat.toFixed(4) + ', ' + ll.lng.toFixed(4);
+    document.getElementById('meas-step1').style.color = '#3fb950';
+  } else {
+    document.getElementById('meas-step1').textContent = 'Kein GPS — warte…';
+    document.getElementById('meas-step1').style.color = '#f85149';
+  }
+  measRecalc();
+}
+
+// Schritt 2: wird von der Hauptsuche aufgerufen
+function measSelectFromSearch(lat, lng, name) {
+  meas.refLat = lat;
+  meas.refLng = lng;
+  meas.refName = name;
+  document.getElementById('meas-step2').textContent = name;
+  document.getElementById('meas-step2').style.color = '#f0c040';
+  // Referenz-Marker
+  if (meas.refMarker) map.removeLayer(meas.refMarker);
+  meas.refMarker = L.circleMarker([lat, lng], {
+    radius: 10, color: '#fff', fillColor: '#f0c040', fillOpacity: 1, weight: 2.5
+  }).addTo(map);
+  map.setView([lat, lng], 10);
+  measRecalc();
+}
+
+// Schritt 3: Distanz berechnen
+function measRecalc() {
+  if (meas.myLat && meas.refLat) {
+    meas.radius = haversine(meas.myLat, meas.myLng, meas.refLat, meas.refLng);
+    const km = (meas.radius / 1000).toFixed(1);
+    document.getElementById('meas-step3').textContent = km + ' km';
+    document.getElementById('meas-step3').style.color = '#58a6ff';
+    // Buttons aktivieren
+    document.getElementById('btn-meas-green').style.opacity = '1';
+    document.getElementById('btn-meas-red').style.opacity = '1';
+  }
+}
+
+// Schritt 4: Kreis zeichnen
 function measDraw(closer) {
-  if (!measState.refLat) { tip('Erst Ort über Suche wählen'); return; }
+  if (!meas.refLat || !meas.radius) { tip('Erst Ort über Suche wählen'); return; }
   const color = closer ? '#3fb950' : '#f85149';
-  const circle = L.circle([measState.refLat, measState.refLng], {
-    radius: measState.dist, color: color, weight: 2.5, opacity: 1,
+  const circle = L.circle([meas.refLat, meas.refLng], {
+    radius: meas.radius, color: color, weight: 2.5, opacity: 1,
     fillColor: color, fillOpacity: closer ? 0.15 : 0.08, dashArray: '8 5'
   }).addTo(map);
-  measState.circles.push(circle);
+  meas.circles.push(circle);
   map.fitBounds(circle.getBounds(), {padding: [40, 40]});
-  const km = (measState.dist / 1000).toFixed(1);
-  const name = document.getElementById('meas-selected-name').textContent;
+  // Log
+  const km = (meas.radius / 1000).toFixed(1);
   const logEl = document.getElementById('meas-log');
   logEl.style.display = 'block';
   logEl.innerHTML += '<div style="font-size:12px;color:' + color + ';padding:3px 0">'
-    + (closer ? '✓ Näher' : '✗ Weiter') + ' — ' + name + ' (' + km + ' km)</div>';
-  // Reset für nächste Runde — NUR Zustand, keine disabled-Attribute
-  measState.refLat = null;
-  measState.refLng = null;
-  measState.dist = null;
-  if (measState.refMarker) { map.removeLayer(measState.refMarker); measState.refMarker = null; }
-  document.getElementById('meas-selected').style.display = 'none';
+    + (closer ? '✓ Näher' : '✗ Weiter') + ' — ' + meas.refName + ' (' + km + ' km)</div>';
+  // Zurücksetzen für nächste Runde
+  meas.refLat = null; meas.refLng = null; meas.refName = null; meas.radius = null;
+  if (meas.refMarker) { map.removeLayer(meas.refMarker); meas.refMarker = null; }
+  document.getElementById('meas-step2').textContent = 'Noch kein Ort gewählt';
+  document.getElementById('meas-step2').style.color = '#6e7681';
+  document.getElementById('meas-step3').textContent = '—';
+  document.getElementById('meas-step3').style.color = '#6e7681';
   document.getElementById('btn-meas-green').style.opacity = '0.4';
   document.getElementById('btn-meas-red').style.opacity = '0.4';
 }
 
+document.getElementById('btn-measuring').addEventListener('click', measOpen);
+document.getElementById('btn-meas-close').addEventListener('click', () => {
+  document.getElementById('meas-box').style.display = 'none';
+  document.getElementById('btn-measuring').classList.remove('active');
+});
 document.getElementById('btn-meas-green').addEventListener('click', () => measDraw(true));
 document.getElementById('btn-meas-red').addEventListener('click', () => measDraw(false));
 document.getElementById('btn-meas-clear').addEventListener('click', () => {
-  measState.circles.forEach(c => map.removeLayer(c)); measState.circles = [];
+  meas.circles.forEach(c => map.removeLayer(c)); meas.circles = [];
   document.getElementById('meas-log').innerHTML = '';
   document.getElementById('meas-log').style.display = 'none';
   tip('Kreise gelöscht');
 });
+
+// GPS aktualisiert → Schritt 1 updaten falls Panel offen
+setInterval(() => {
+  if (document.getElementById('meas-box').style.display !== 'none') measUpdateMyPos();
+}, 3000);
 
 setTimeout(()=>map.invalidateSize(),100);
 setTimeout(()=>map.invalidateSize(),300);
