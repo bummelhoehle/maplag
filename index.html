@@ -520,35 +520,57 @@ let displayLayer = null;
 
 function rebuildDisplay() {
   if (displayLayer) { map.removeLayer(displayLayer); displayLayer = null; }
+  // Clean up miss display layers
+  if (rebuildDisplay._missLayers) {
+    rebuildDisplay._missLayers.forEach(l => map.removeLayer(l));
+    rebuildDisplay._missLayers = [];
+  }
 
-  // Handle inverted (Hit) and Miss zones separately
-  st.zones.filter(z => z.layer._isInverted || z.layer._isMiss).forEach(z => {
+  // Handle inverted (Hit) zones separately — they have holes, can't be unioned
+  st.zones.filter(z => z.layer._isInverted).forEach(z => {
     if (!map.hasLayer(z.layer)) z.layer.addTo(map);
   });
 
-  const normalZones = st.zones.filter(z => !z.layer._isInverted && !z.layer._isMiss);
+  // Miss + normal zones → union display (red for miss, blue for normal)
+  const normalZones = st.zones.filter(z => !z.layer._isInverted);
   if (normalZones.length === 0) return;
 
-  let union = null;
-  for (const zone of normalZones) {
-    const t = layerToTurf(zone.layer);
-    if (!t) continue;
-    try { union = union ? turf.union(union, t) : t; } catch(e) {}
-  }
-  if (!union) return;
+  const missZones = normalZones.filter(z => z.layer._isMiss);
+  const blueZones = normalZones.filter(z => !z.layer._isMiss);
 
-  const s = sty('hider');
-  if (union.geometry.type === 'Polygon') {
-    const lls = union.geometry.coordinates[0].map(c => L.latLng(c[1], c[0]));
-    displayLayer = L.polygon(lls, s).addTo(map);
-  } else if (union.geometry.type === 'MultiPolygon') {
-    const allLls = union.geometry.coordinates.map(poly => poly[0].map(c => L.latLng(c[1], c[0])));
-    displayLayer = L.polygon(allLls, s).addTo(map);
-  }
-  if (displayLayer) {
-    displayLayer.on('mousedown mouseup mousemove touchstart touchmove touchend click', e => {
+  function buildUnionLayer(zones, style) {
+    if (zones.length === 0) return null;
+    let union = null;
+    for (const zone of zones) {
+      const t = layerToTurf(zone.layer);
+      if (!t) continue;
+      try { union = union ? turf.union(union, t) : t; } catch(e) {}
+    }
+    if (!union) return null;
+    let layer;
+    if (union.geometry.type === 'Polygon') {
+      const lls = union.geometry.coordinates[0].map(c => L.latLng(c[1], c[0]));
+      layer = L.polygon(lls, style).addTo(map);
+    } else if (union.geometry.type === 'MultiPolygon') {
+      const allLls = union.geometry.coordinates.map(poly => poly[0].map(c => L.latLng(c[1], c[0])));
+      layer = L.polygon(allLls, style).addTo(map);
+    }
+    if (layer) layer.on('mousedown mouseup mousemove touchstart touchmove touchend click', e => {
       if (st.mode !== 'none') L.DomEvent.stopPropagation(e);
     });
+    return layer;
+  }
+
+  const missStyle = {color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3};
+  const blueStyle = sty('hider');
+
+  displayLayer = buildUnionLayer(blueZones, blueStyle);
+  const missDisplay = buildUnionLayer(missZones, missStyle);
+  // Store miss display layer for cleanup
+  if (missDisplay) {
+    missDisplay._isMissDisplay = true;
+    if (!rebuildDisplay._missLayers) rebuildDisplay._missLayers = [];
+    rebuildDisplay._missLayers.push(missDisplay);
   }
 }
 
