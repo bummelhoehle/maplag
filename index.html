@@ -146,17 +146,17 @@ html,body{height:100%;overflow:hidden}
       <button class="tb-btn" data-mode="circ">◎ Radar</button>
     </div>
     <div class="sep"></div>
-    <button class="tb-btn" id="btn-opnv" title="ÖPNV-Layer ein/ausblenden">🚌 ÖPNV</button>
+    <button class="tb-btn" id="btn-opnv" title="ÖPNV-Layer ein/ausblenden">🚌 Transit</button>
     <div class="sep"></div>
     <button class="tb-btn" id="btn-thermo" title="Thermometer">🌡 Thermo</button>
     <button class="tb-btn" id="btn-measuring" title="Measuring">📏 Measuring</button>
     <div class="spacer"></div>
     <button class="tb-btn" id="btn-units" title="Toggle units">km</button>
-    <button class="tb-btn" id="btn-zones">📋 Zonen</button>
-    <button class="tb-btn" id="btn-save">💾 Speichern</button>
-    <button class="tb-btn" id="btn-load">📂 Laden</button>
+    <button class="tb-btn" id="btn-zones">📋 Zones</button>
+    <button class="tb-btn" id="btn-save">💾 Save</button>
+    <button class="tb-btn" id="btn-load">📂 Load</button>
     <input type="file" id="file-in" accept=".json" style="display:none">
-    <button class="tb-btn" id="btn-clear" style="color:#f85149;border-color:#f85149">🗑 Löschen</button>
+    <button class="tb-btn" id="btn-clear" style="color:#f85149;border-color:#f85149">🗑 Clear</button>
   </div>
   <div id="main">
     <div id="map">
@@ -166,28 +166,31 @@ html,body{height:100%;overflow:hidden}
         <div id="search-bar">
           <div style="position:relative">
             <span id="search-icon">🔍</span>
-            <input type="text" id="search-input" placeholder="Ort suchen…" autocomplete="off">
+            <input type="text" id="search-input" placeholder="Search location…" autocomplete="off">
           </div>
           <div id="search-results"></div>
         </div>
       </div>
       <div id="radius-popup">
-        <p>RADAR UM DEINEN STANDORT</p>
+        <p>RADAR AROUND YOUR LOCATION</p>
         <div class="row">
           <input type="number" id="radius-km" min="0.1" max="500" step="0.1" value="5">
-          <span id="radius-unit-label" style="font-size:12px;color:#8b949e">km</span>
-          <button class="tb-btn active" id="btn-ok-radius">Draw</button>
+          <span style="font-size:12px;color:#8b949e">km</span>
+        </div>
+        <div class="row" style="margin-top:8px;gap:6px">
+          <button class="tb-btn" id="btn-ok-hit" style="flex:1;border-color:#3fb950;color:#3fb950;background:rgba(63,185,80,.08)">✓ Hit</button>
+          <button class="tb-btn" id="btn-ok-miss" style="flex:1;border-color:#f85149;color:#f85149;background:rgba(248,81,73,.08)">✗ Miss</button>
         </div>
       </div>
     </div>
     <div id="sidebar">
-      <div id="sidebar-title">ZONEN (<span id="zone-count">0</span>)</div>
-      <div id="zone-list"><div class="empty">Noch keine Zonen.<br>Zeichne auf der Karte.</div></div>
+      <div id="sidebar-title">ZONES (<span id="zone-count">0</span>)</div>
+      <div id="zone-list"><div class="empty">No zones yet.<br>Draw on the map.</div></div>
     </div>
   </div>
   <div id="statusbar">
-    Modus: <span id="st-mode">Bewegen</span>
-    &nbsp;|&nbsp; Zonen: <span id="st-count">0</span>
+    Mode: <span id="st-mode">Pan</span>
+    &nbsp;|&nbsp; Zones: <span id="st-count">0</span>
   </div>
 </div>
 
@@ -201,25 +204,25 @@ html,body{height:100%;overflow:hidden}
     </div>
     <div class="sheet-body">
       <div id="tp-step-start">
-        <div style="font-size:13px;color:#8b949e;margin-bottom:14px;line-height:1.7">Starte am aktuellen GPS-Standort. Bewege dich dann zu einem neuen Punkt und drücke <b style="color:#e6edf3">Stop</b>.</div>
-        <button class="tb-btn active" id="btn-tp-start" style="width:100%;padding:12px;font-size:14px">📍 Start — Standort erfassen</button>
+        <div style="font-size:13px;color:#8b949e;margin-bottom:14px;line-height:1.7">Starte am aktuellen GPS-Standort. Bewege dich dann zu einem neuen Punkt und press <b style="color:#e6edf3">Stop</b>.</div>
+        <button class="tb-btn active" id="btn-tp-start" style="width:100%;padding:12px;font-size:14px">📍 Start — Capture location</button>
         <div id="tp-start-info" style="display:none;margin-top:10px;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;font-size:12px;color:#8b949e"><span style="color:#3fb950">● Start:</span> <span id="tp-start-coords"></span></div>
       </div>
       <div id="tp-step-stop" style="display:none;margin-top:12px">
         <div id="tp-start-info2" style="margin-bottom:10px;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;font-size:12px;color:#8b949e"><span style="color:#3fb950">● Start:</span> <span id="tp-start-coords2"></span></div>
-        <button class="tb-btn" id="btn-tp-stop" style="width:100%;padding:12px;font-size:14px;border-color:#f0c040;color:#f0c040">🛑 Stop — Neuen Standort erfassen</button>
+        <button class="tb-btn" id="btn-tp-stop" style="width:100%;padding:12px;font-size:14px;border-color:#f0c040;color:#f0c040">🛑 Stop — Capture new location</button>
         <div id="tp-stop-info" style="display:none;margin-top:10px;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;font-size:12px;color:#8b949e"><span style="color:#f0c040">● Stop:</span> <span id="tp-stop-coords"></span><br><span id="tp-dist-info" style="color:#e6edf3;font-size:13px;font-weight:600"></span></div>
       </div>
       <div id="tp-step-answer" style="display:none;margin-top:14px">
-        <div style="font-size:13px;color:#c9d1d9;margin-bottom:12px;line-height:1.6">Ist der Hider <b style="color:#e6edf3">wärmer</b> (näher) oder <b style="color:#e6edf3">kälter</b> (weiter) geworden?</div>
+        <div style="font-size:13px;color:#c9d1d9;margin-bottom:12px;line-height:1.6">Ist der Hider <b style="color:#e6edf3">warmer</b> (closer) oder <b style="color:#e6edf3">cooler</b> (weiter) geworden?</div>
         <div style="display:flex;gap:8px">
-          <button id="btn-tp-warmer" style="flex:1;padding:14px 6px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.1);color:#f85149;font-size:14px;font-weight:600;cursor:pointer">🔥 Wärmer</button>
-          <button id="btn-tp-cooler" style="flex:1;padding:14px 6px;border-radius:10px;border:1px solid #58a6ff;background:rgba(88,166,255,.1);color:#58a6ff;font-size:14px;font-weight:600;cursor:pointer">❄️ Kälter</button>
+          <button id="btn-tp-warmer" style="flex:1;padding:14px 6px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.1);color:#f85149;font-size:14px;font-weight:600;cursor:pointer">🔥 Warmer</button>
+          <button id="btn-tp-cooler" style="flex:1;padding:14px 6px;border-radius:10px;border:1px solid #58a6ff;background:rgba(88,166,255,.1);color:#58a6ff;font-size:14px;font-weight:600;cursor:pointer">❄️ Cooler</button>
         </div>
       </div>
       <div class="tp-log" id="tp-log" style="margin-top:12px"></div>
-      <div id="tp-zone-info" style="display:none;margin-top:8px;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:8px 12px;font-size:11px;color:#8b949e">Eingrenzung auf Karte aktualisiert</div>
-      <button id="btn-tp-reset" style="margin-top:12px">↺ Zurücksetzen</button>
+      <div id="tp-zone-info" style="display:none;margin-top:8px;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:8px 12px;font-size:11px;color:#8b949e">Map updated</div>
+      <button id="btn-tp-reset" style="margin-top:12px">↺ Reset</button>
     </div>
   </div>
 </div>
@@ -229,7 +232,7 @@ html,body{height:100%;overflow:hidden}
   <div class="sheet-box">
     <div class="sheet-handle"></div>
     <div class="sheet-header">
-      <h3>Zonen (<span id="zp-count">0</span>)</h3>
+      <h3>Zones (<span id="zp-count">0</span>)</h3>
       <button class="sheet-close" id="zone-panel-close">×</button>
     </div>
     <div id="zone-panel-list" class="sheet-body"></div>
@@ -238,10 +241,10 @@ html,body{height:100%;overflow:hidden}
 
 <div id="label-modal">
   <div id="label-box">
-    <h3>Zone benennen</h3>
-    <input type="text" id="label-input" placeholder="z.B. Verbotene Zone Nord" maxlength="40">
+    <h3>Name zone</h3>
+    <input type="text" id="label-input" placeholder="e.g. Forbidden Zone North" maxlength="40">
     <div class="modal-btns">
-      <button class="tb-btn" id="btn-lbl-cancel">Abbrechen</button>
+      <button class="tb-btn" id="btn-lbl-cancel">Cancel</button>
       <button class="tb-btn active" id="btn-lbl-ok">OK</button>
     </div>
   </div>
@@ -251,8 +254,8 @@ html,body{height:100%;overflow:hidden}
   <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:20px;width:min(300px,90vw)">
     <p id="confirm-msg" style="font-size:13px;color:#c9d1d9;margin-bottom:16px;line-height:1.5"></p>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="tb-btn" id="btn-confirm-cancel">Abbrechen</button>
-      <button class="tb-btn" id="btn-confirm-ok" style="color:#f85149;border-color:#f85149">Löschen</button>
+      <button class="tb-btn" id="btn-confirm-cancel">Cancel</button>
+      <button class="tb-btn" id="btn-confirm-ok" style="color:#f85149;border-color:#f85149">Delete</button>
     </div>
   </div>
 </div>
@@ -260,15 +263,15 @@ html,body{height:100%;overflow:hidden}
 <!-- MEASURING PANEL -->
 <div id="meas-box" style="display:none;position:fixed;bottom:80px;left:10px;right:10px;z-index:9500;max-width:360px;pointer-events:all">
   <div style="background:#161b22;border:2px solid #f0c040;border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.7)">
-    <div style="font-size:12px;color:#8b949e;margin-bottom:12px">Ort über 🔍 Suche wählen, dann Näher oder Weiter tippen.</div>
+    <div style="font-size:12px;color:#8b949e;margin-bottom:12px">Search a location via 🔍, then tap Hit or Miss.</div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button id="btn-meas-green" style="flex:1;padding:13px;border-radius:10px;border:1px solid #3fb950;background:rgba(63,185,80,.08);color:#3fb950;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✓ Näher</button>
-      <button id="btn-meas-red" style="flex:1;padding:13px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.08);color:#f85149;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✗ Weiter</button>
+      <button id="btn-meas-green" style="flex:1;padding:13px;border-radius:10px;border:1px solid #3fb950;background:rgba(63,185,80,.08);color:#3fb950;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✓ Hit</button>
+      <button id="btn-meas-red" style="flex:1;padding:13px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.08);color:#f85149;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✗ Miss</button>
     </div>
     <div id="meas-log" style="display:none;margin-bottom:10px;max-height:100px;overflow-y:auto;border-top:1px solid #30363d;padding-top:8px"></div>
     <div style="display:flex;gap:8px">
-      <button id="btn-meas-clear" style="flex:1;padding:9px;border-radius:8px;border:1px solid #30363d;background:transparent;color:#6e7681;font-size:12px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">🗑 Löschen</button>
-      <button id="btn-meas-close" style="flex:1;padding:9px;border-radius:8px;border:1px solid #30363d;background:transparent;color:#6e7681;font-size:12px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✕ Schließen</button>
+      <button id="btn-meas-clear" style="flex:1;padding:9px;border-radius:8px;border:1px solid #30363d;background:transparent;color:#6e7681;font-size:12px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">🗑 Clear</button>
+      <button id="btn-meas-close" style="flex:1;padding:9px;border-radius:8px;border:1px solid #30363d;background:transparent;color:#6e7681;font-size:12px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✕ Close</button>
     </div>
   </div>
 </div>
@@ -281,7 +284,7 @@ html,body{height:100%;overflow:hidden}
 <script>
 window.addEventListener('load', function() {
 
-// ── GERÄTEERKENNUNG ───────────────────────────────────────
+// ── DEVICE DETECTION ───────────────────────────────────────
 const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 const isAndroid = /Android/.test(navigator.userAgent);
@@ -291,8 +294,8 @@ const deviceType = isMobile ? 'mobile' : isTablet ? 'tablet' : 'desktop';
 
 // Labels je nach Gerät
 const T = {
-  free:  isTouchDevice ? 'Finger gedrückt halten → Freihand' : 'Maus gedrückt halten → Freihand',
-  circ:  isTouchDevice ? 'Karte antippen → Radius um GPS-Standort' : 'Karte klicken → Radius um GPS-Standort',
+  free:  isTouchDevice ? 'Hold finger → freehand' : 'Hold mouse → freehand',
+  circ:  isTouchDevice ? 'Tap map → radar around GPS' : 'Tap map → radar around GPS',
   start: 'Karte bewegen oder Modus wählen',
 };
 
@@ -340,7 +343,7 @@ document.getElementById('btn-thermo-close').addEventListener('click', () => {
 });
 
 const COLORS={seeker:{fill:'#f85149',stroke:'#f85149'},hider:{fill:'#58a6ff',stroke:'#58a6ff'},neutral:{fill:'#3fb950',stroke:'#3fb950'},custom:{fill:'#d29922',stroke:'#d29922'}};
-const MODE_LABELS={move:'Bewegen',free:'Draw',circ:'Radar'};
+const MODE_LABELS={move:'Pan',free:'Draw',circ:'Radar'};
 const TYPE_LABELS={seeker:'Seeker',hider:'Hider',neutral:'Neutral',custom:'Custom'};
 const st={mode:'none',type:'hider',zones:[],selId:null,drawing:false,startLL:null,prevLayer:null,freePoints:[],freeLayer:null,pendCenter:null,labelCb:null};
 
@@ -400,11 +403,11 @@ function toggleOpnv() {
     }
     opnvLayer.addTo(map);
     btn.classList.add('active');
-    tip('ÖPNV-Layer aktiv — Schienen & Stationen sichtbar');
+    tip('Transit layer active');
   } else {
     if (opnvLayer) map.removeLayer(opnvLayer);
     btn.classList.remove('active');
-    tip('ÖPNV-Layer ausgeblendet');
+    tip('Transit layer hidden');
   }
 }
 
@@ -433,7 +436,7 @@ function startLocation() {
           fillColor: '#58a6ff', fillOpacity: 1, weight: 3,
         }).addTo(map);
         map.setView([lat, lng], 14);
-        tip(`Standort gefunden · ±${Math.round(acc)}m`);
+        tip(`Location found · ±${Math.round(acc)}m`);
       } else {
         locationMarker.setLatLng([lat, lng]);
         locationCircle.setLatLng([lat, lng]);
@@ -441,8 +444,8 @@ function startLocation() {
       }
     },
     (err) => {
-      const msgs = {1:'GPS-Zugriff verweigert', 2:'Position nicht ermittelbar', 3:'GPS-Timeout'};
-      tip(msgs[err.code] || 'GPS-Fehler');
+      const msgs = {1:'GPS-Zugriff verweigert', 2:'Position unavailable', 3:'GPS timeout'};
+      tip(msgs[err.code] || 'GPS-Error');
     },
     { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
   );
@@ -511,8 +514,8 @@ function bindLayerEvents(layer, id) {
   });
 }
 
-// Unsichtbarer Geometrie-Layer pro Zone (für Events/Selektion)
-// Ein sichtbarer Union-Display-Layer für alle Zonen zusammen
+// Unsichtbarer Geometrie-Layer pro Zone (for Events/Selektion)
+// Ein sichtbarer Union-Display-Layer for alle Zonen zusammen
 let displayLayer = null;
 
 function rebuildDisplay() {
@@ -547,7 +550,7 @@ async function addZone(mkLayer, def) {
   if (!lbl) return;
 
   const id = genId();
-  // Zone-Layer unsichtbar speichern (opacity 0) — nur Geometrieträger
+  // Zone-Layer unsichtbar speichern (opacity 0) — nur geometry carrier
   const layer = mkLayer({ color:'transparent', weight:0, fillColor:'transparent', fillOpacity:0 });
   layer.addTo(map);
   bindLayerEvents(layer, id);
@@ -603,8 +606,8 @@ document.querySelectorAll('[data-mode]').forEach(b=>{
       document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
       map.dragging.enable();
       document.getElementById('radius-popup').style.display='none';
-      document.getElementById('st-mode').textContent='Bewegen';
-      tip('Karte bewegen — Modus deaktiviert');
+      document.getElementById('st-mode').textContent='Pan';
+      tip('Pan mode — drawing disabled');
       return;
     }
     cancelDraw();
@@ -680,30 +683,53 @@ map.on('mouseup',async(e)=>{
     if(st.freeLayer){map.removeLayer(st.freeLayer);st.freeLayer=null;}
     const pts=convexHull(st.freePoints);st.freePoints=[];
     if(pts.length<3)return;
-    await addZone(s=>L.polygon(pts,s),'Draw-Zone');
+    await addZone(s=>L.polygon(pts,s),'Draw zone');
   }
 });
 
-// Kreis-Modus: Popup sofort beim Aktivieren anzeigen
+// Kreis-Mode: Popup sofort beim Aktivieren anzeigen
 map.on('click',async(e)=>{
   if(st.mode!=='circ')return;
-  // Bereits durch mode-switch geöffnet, ignorieren
+  // Bereits durch mode-switch open, ignorieren
 });
-document.getElementById('btn-ok-radius').onclick=async()=>{
-  const km=parseFloat(document.getElementById('radius-km').value);
-  if(isNaN(km)||km<=0)return;
+// Inverted circle: world rectangle minus inner circle = everything OUTSIDE
+function invertedCircleLayer(lat, lng, radiusM, style) {
+  const steps = 64;
+  const radiusKm = radiusM / 1000;
+  const innerCircle = turf.circle([lng, lat], radiusKm, {steps, units:'kilometers'});
+  // Large bounding box covering the world
+  const world = turf.bboxPolygon([-180, -85, 180, 85]);
+  const inverted = turf.difference(world, innerCircle);
+  if (!inverted) return L.circle([lat, lng], {radius: radiusM, ...style}); // fallback
+  const coords = inverted.geometry.coordinates;
+  const lls = coords.map(ring => ring.map(c => L.latLng(c[1], c[0])));
+  return L.polygon(lls, style);
+}
+
+async function drawRadar(hit) {
+  const km = parseFloat(document.getElementById('radius-km').value);
+  if(isNaN(km)||km<=0) return;
   document.getElementById('radius-popup').style.display='none';
-  // Modus zurücksetzen
   st.mode='none';
   document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
-  document.getElementById('st-mode').textContent='Bewegen';
-  if(!locationMarker){tip('Kein GPS-Standort');return;}
+  document.getElementById('st-mode').textContent='Pan';
+  if(!locationMarker){tip('No GPS location');return;}
   const ll=locationMarker.getLatLng();
-  const c=L.latLng(ll.lat,ll.lng);
-  map.setView(c,12);
-  await addZone(s=>L.circle(c,{radius:toMeters(km),...s}),`Radar ${km} ${unitLabel()}`);
-};
-document.getElementById('radius-km').onkeydown=e=>{if(e.key==='Enter')document.getElementById('btn-ok-radius').click();};
+  const radiusM = toMeters(km);
+  const label = `${hit?'✓ Hit':'✗ Miss'} Radar ${km} ${unitLabel()}`;
+  if (hit) {
+    // Hit = outside the circle
+    await addZone(s => invertedCircleLayer(ll.lat, ll.lng, radiusM, s), label);
+  } else {
+    // Miss = inside the circle
+    const color = '#f85149';
+    await addZone(s => L.circle([ll.lat,ll.lng],{radius:radiusM,...s,color,fillColor:color}), label);
+  }
+  map.setView(ll, 12);
+}
+document.getElementById('btn-ok-hit').addEventListener('click', ()=>drawRadar(true));
+document.getElementById('btn-ok-miss').addEventListener('click', ()=>drawRadar(false));
+document.getElementById('radius-km').onkeydown=e=>{if(e.key==='Enter')drawRadar(true);};
 
 // ── TOUCH EVENTS — native, komplett unabhängig von Leaflet-Layer-Events ──
 const mc=map.getContainer();
@@ -747,7 +773,7 @@ mc.addEventListener('touchend',async e=>{
     if(st.freeLayer){map.removeLayer(st.freeLayer);st.freeLayer=null;}
     const pts=convexHull(st.freePoints);st.freePoints=[];
     if(pts.length<3)return;
-    await addZone(s=>L.polygon(pts,s),'Draw-Zone');
+    await addZone(s=>L.polygon(pts,s),'Draw zone');
   }
 },{passive:false});
 
@@ -766,7 +792,7 @@ document.getElementById('btn-save').addEventListener('click',()=>{
 document.getElementById('btn-load').addEventListener('click',()=>document.getElementById('file-in').click());
 document.getElementById('file-in').addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
-  let data;try{data=JSON.parse(await f.text());}catch{alert('Ungültige JSON-Datei');return;}
+  let data;try{data=JSON.parse(await f.text());}catch{alert('Invalid JSON file');return;}
   st.zones.forEach(z=>map.removeLayer(z.layer));st.zones=[];
   data.forEach(d=>{
     const s=sty(d.type);let layer;
@@ -781,7 +807,7 @@ document.getElementById('file-in').addEventListener('change',async e=>{
 });
 document.getElementById('btn-clear').addEventListener('click',()=>{
   if(!st.zones.length)return;
-  showConfirm(`Alle ${st.zones.length} Zone(n) löschen?`, ()=>{
+  showConfirm(`All ${st.zones.length} zone(s) delete?`, ()=>{
     st.zones.forEach(z=>map.removeLayer(z.layer));
     st.zones=[];st.selId=null;
     if(displayLayer){map.removeLayer(displayLayer);displayLayer=null;}
@@ -802,14 +828,14 @@ function renderZonePanel() {
   document.getElementById('zp-count').textContent = n;
   const list = document.getElementById('zone-panel-list');
   if (!n) {
-    list.innerHTML = '<div class="zp-empty">Noch keine Zonen gezeichnet.</div>';
+    list.innerHTML = '<div class="zp-empty">No zones drawn yet.</div>';
     return;
   }
   list.innerHTML = st.zones.map(z => `
     <div class="zp-item">
       <div class="zp-dot"></div>
       <div class="zp-name">${z.lbl}</div>
-      <button class="zp-del" data-id="${z.id}">🗑 Löschen</button>
+      <button class="zp-del" data-id="${z.id}">🗑 Clear</button>
     </div>`).join('');
   list.querySelectorAll('.zp-del').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -851,7 +877,7 @@ document.addEventListener('click', function(e) {
 });
 
 async function doSearch(q) {
-  searchResults.innerHTML = '<div class="sr-item"><div class="sr-main" style="color:#6e7681">Suche…</div></div>';
+  searchResults.innerHTML = '<div class="sr-item"><div class="sr-main" style="color:#6e7681">Searching…</div></div>';
   searchResults.style.display = 'block';
   try {
     const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=de`;
@@ -859,7 +885,7 @@ async function doSearch(q) {
     const data = await res.json();
     const features = data.features || [];
     if (!features.length) {
-      searchResults.innerHTML = '<div class="sr-item"><div class="sr-main" style="color:#6e7681">Keine Ergebnisse</div></div>';
+      searchResults.innerHTML = '<div class="sr-item"><div class="sr-main" style="color:#6e7681">No results</div></div>';
       return;
     }
     searchResults.innerHTML = features.map((f, i) => {
@@ -897,7 +923,7 @@ async function doSearch(q) {
       });
     });
   } catch(e) {
-    searchResults.innerHTML = '<div class="sr-item"><div class="sr-main" style="color:#f85149">Fehler bei der Suche</div></div>';
+    searchResults.innerHTML = '<div class="sr-item"><div class="sr-main" style="color:#f85149">Search error</div></div>';
   }
 }
 
@@ -921,11 +947,11 @@ function toggleThermo() {
 document.getElementById('btn-thermo').addEventListener('click', toggleThermo);
 
 function tpGetGPS(onSuccess) {
-  if (!navigator.geolocation) { tip('GPS nicht verfügbar'); return; }
-  tip('GPS wird ermittelt…', 2000);
+  if (!navigator.geolocation) { tip('GPS not available'); return; }
+  tip('Getting GPS…', 2000);
   navigator.geolocation.getCurrentPosition(
     pos => onSuccess({lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy}),
-    err => tip({1:'GPS verweigert',2:'Position nicht ermittelbar',3:'GPS-Timeout'}[err.code]||'GPS-Fehler'),
+    err => tip({1:'GPS denied',2:'Position unavailable',3:'GPS timeout'}[err.code]||'GPS-Error'),
     {enableHighAccuracy: true, timeout: 15000, maximumAge: 0}
   );
 }
@@ -965,7 +991,7 @@ function tpDrawBisector(startPos, stopPos, warmer) {
   }).addTo(map);
   tp.layers.push(bisector);
 
-  // Schattierung — wärmer = Seite von Stop, kälter = Seite von Start
+  // Schattierung — warmer = Seite von Stop, cooler = Seite von Start
   // Zeige Pfeil-Hinweis
   const arrowPt = L.latLng(midLat + perpLat * 0.15, midLng + perpLng * 0.15);
   const arrowMarker = L.circleMarker(arrowPt, {
@@ -1029,13 +1055,13 @@ document.getElementById('btn-tp-start').addEventListener('click', () => {
 
     document.getElementById('tp-start-coords2').textContent =
       `${pos.lat.toFixed(4)}, ${pos.lng.toFixed(4)}`;
-    tip('Startpunkt gesetzt! Bewege dich und drücke Stop.');
+    tip('Start set! Move and press Stop.');
   });
 });
 
 // STOP Button
 document.getElementById('btn-tp-stop').addEventListener('click', () => {
-  if (!tp.startPos) { tip('Zuerst Start drücken'); return; }
+  if (!tp.startPos) { tip('Zuerst Start pressn'); return; }
   tpGetGPS(pos => {
     tp.stopPos = pos;
     tpAddMarker(pos.lat, pos.lng, '#f0c040', 'Stop');
@@ -1058,7 +1084,7 @@ document.getElementById('btn-tp-stop').addEventListener('click', () => {
     // Antwort-Buttons anzeigen
     document.getElementById('tp-step-answer').style.display = 'block';
     tpRenderConstraints();
-    tip(`Stop gesetzt (${distKm} km). Wärmer oder kälter?`);
+    tip(`Stop set (${distKm} km). Wärmer oder cooler?`);
   });
 });
 
@@ -1067,19 +1093,19 @@ document.getElementById('btn-tp-warmer').addEventListener('click', () => {
   if (!tp.startPos || !tp.stopPos) return;
   const dist = haversine(tp.startPos.lat, tp.startPos.lng, tp.stopPos.lat, tp.stopPos.lng);
   tp.constraints.push({startPos: {...tp.startPos}, stopPos: {...tp.stopPos}, warmer: true});
-  tp.log.push({text: `🔥 Wärmer (${toDisplay(dist)} Schritt)`, color: '#f85149'});
+  tp.log.push({text: `🔥 Warmer (${toDisplay(dist)} Schritt)`, color: '#f85149'});
   tpRenderConstraints();
   tpRenderLog();
   document.getElementById('tp-zone-info').style.display = 'block';
 
-  // Nächste Runde: Stop wird zum neuen Start
+  // Next Runde: Stop wird zum neuen Start
   tp.startPos = {...tp.stopPos};
   tp.stopPos = null;
   document.getElementById('tp-step-answer').style.display = 'none';
   document.getElementById('tp-stop-info').style.display = 'none';
   document.getElementById('tp-start-coords2').textContent =
     `${tp.startPos.lat.toFixed(4)}, ${tp.startPos.lng.toFixed(4)}`;
-  tip('Super! Jetzt weiterbewegen → nächsten Stop setzen.');
+  tip('Super! Jetzt weiterbewegen → nextn Stop setzen.');
 });
 
 // Antwort: Kälter
@@ -1087,19 +1113,19 @@ document.getElementById('btn-tp-cooler').addEventListener('click', () => {
   if (!tp.startPos || !tp.stopPos) return;
   const dist = haversine(tp.startPos.lat, tp.startPos.lng, tp.stopPos.lat, tp.stopPos.lng);
   tp.constraints.push({startPos: {...tp.startPos}, stopPos: {...tp.stopPos}, warmer: false});
-  tp.log.push({text: `❄️ Kälter (${toDisplay(dist)} Schritt)`, color: '#58a6ff'});
+  tp.log.push({text: `❄️ Cooler (${toDisplay(dist)} Schritt)`, color: '#58a6ff'});
   tpRenderConstraints();
   tpRenderLog();
   document.getElementById('tp-zone-info').style.display = 'block';
 
-  // Nächste Runde: Stop wird zum neuen Start
+  // Next Runde: Stop wird zum neuen Start
   tp.startPos = {...tp.stopPos};
   tp.stopPos = null;
   document.getElementById('tp-step-answer').style.display = 'none';
   document.getElementById('tp-stop-info').style.display = 'none';
   document.getElementById('tp-start-coords2').textContent =
     `${tp.startPos.lat.toFixed(4)}, ${tp.startPos.lng.toFixed(4)}`;
-  tip('OK! Weiterbewegen → nächsten Stop setzen.');
+  tip('OK! Move on → set next stop.');
 });
 
 // Reset
@@ -1115,7 +1141,7 @@ document.getElementById('btn-tp-reset').addEventListener('click', () => {
   document.getElementById('tp-zone-info').style.display = 'none';
   document.getElementById('tp-log').style.display = 'none';
   document.getElementById('tp-log').innerHTML = '';
-  tip('Thermometer zurückgesetzt');
+  tip('Thermometer reset');
 });
 
 // ── MEASURING ─────────────────────────────────────────────
@@ -1180,19 +1206,25 @@ function measRecalc() {
 
 // Schritt 4: Kreis als Zone zeichnen
 async function measDraw(closer) {
-  if (!meas.refLat || !meas.radius) { tip('Erst Ort über Suche wählen'); return; }
+  if (!meas.refLat || !meas.radius) { tip('Search for a location first'); return; }
   const km = (meas.radius / 1000).toFixed(1);
-  const label = (closer ? '✓ Näher' : '✗ Weiter') + ' — ' + meas.refName + ' (' + km + ' km)';
+  const label = (closer ? "✓ Hit" : "✗ Miss") + ' — ' + meas.refName + ' (' + km + ' km)';
   const refLat = meas.refLat, refLng = meas.refLng, radius = meas.radius;
-  // Als Zone hinzufügen (nutzt addZone → erscheint in Zonenliste)
-  await addZone(s => L.circle([refLat, refLng], {radius, ...s}), label);
+  if (closer) {
+    // Hit = outside the circle
+    await addZone(s => invertedCircleLayer(refLat, refLng, radius, s), label);
+  } else {
+    // Miss = inside the circle
+    const color = '#f85149';
+    await addZone(s => L.circle([refLat, refLng], {radius, ...s, color, fillColor: color}), label);
+  }
   map.fitBounds(L.circle([refLat, refLng], {radius}).getBounds(), {padding: [40, 40]});
   // Log
   const color = closer ? '#3fb950' : '#f85149';
   const logEl = document.getElementById('meas-log');
   logEl.style.display = 'block';
   logEl.innerHTML += '<div style="font-size:12px;color:' + color + ';padding:3px 0">' + label + '</div>';
-  // Zurücksetzen für nächste Runde
+  // Reset for next round
   meas.refLat = null; meas.refLng = null; meas.refName = null; meas.radius = null;
   if (meas.refMarker) { map.removeLayer(meas.refMarker); meas.refMarker = null; }
   document.getElementById('btn-meas-green').style.opacity = '0.4';
@@ -1215,7 +1247,7 @@ document.getElementById('btn-meas-red').addEventListener('click', () => measDraw
 document.getElementById('btn-meas-clear').addEventListener('click', () => {
   document.getElementById('meas-log').innerHTML = '';
   document.getElementById('meas-log').style.display = 'none';
-  tip('Log gelöscht — Zonen über 📋 Zonen löschen');
+  tip('Log cleared — Zonen über 📋 Zones delete');
 });
 
 // GPS aktualisiert → Schritt 1 updaten falls Panel offen
