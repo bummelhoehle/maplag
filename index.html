@@ -248,12 +248,6 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       </div>
     </div>
     <div class="spacer"></div>
-    <button class="tb-btn" id="btn-zones"><span class="tb-icon">📋</span><span class="tb-lbl">Zones</span></button>
-    <button class="tb-btn" id="btn-save"><span class="tb-icon">💾</span><span class="tb-lbl">Save</span></button>
-    <button class="tb-btn" id="btn-load"><span class="tb-icon">📂</span><span class="tb-lbl">Load</span></button>
-    <input type="file" id="file-in" accept=".json" style="display:none">
-    <button class="tb-btn danger" id="btn-clear"><span class="tb-icon">🗑</span><span class="tb-lbl">Clear</span></button>
-    <button class="tb-btn" id="btn-share"><span class="tb-icon">🔗</span><span class="tb-lbl">Share</span></button>
     <div class="sep"></div>
     <button class="tb-btn" id="btn-theme"><span class="tb-icon">☀</span><span class="tb-lbl">Light</span></button>
   </div>
@@ -261,6 +255,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     <div id="map">
       <div id="tip"></div>
       <div id="radius-popup" style="display:none"></div>
+      <button id="btn-zones" style="position:absolute;top:10px;right:10px;z-index:1000;background:var(--bg1);color:var(--text1);border:1px solid var(--border2);border-radius:var(--r8);padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px #0006">📋 <span id="zp-count">0</span></button>
     </div>
   </div>
   <div id="statusbar">
@@ -1096,46 +1091,6 @@ mc.addEventListener('touchend',async e=>{
   if(st.mode==='free'&&st.drawing) await finishFreeDraw();
 },{passive:false});
 
-document.getElementById('btn-save').addEventListener('click',()=>{
-  const data=st.zones.map(z=>{
-    let geo;
-    if(z.layer instanceof L.Circle)geo={type:'circle',center:z.layer.getLatLng(),radius:z.layer.getRadius()};
-    else if(z.layer instanceof L.Rectangle)geo={type:'rect',bounds:z.layer.getBounds()};
-    else geo={type:'poly',latlngs:z.layer.getLatLngs()};
-    return{id:z.id,lbl:z.lbl,type:z.type,isMiss:!!z.layer._isMiss,isInverted:!!z.layer._isInverted,geo};
-  });
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
-  a.download='jetlag-zones.json';a.click();
-});
-document.getElementById('btn-load').addEventListener('click',()=>document.getElementById('file-in').click());
-document.getElementById('file-in').addEventListener('change',async e=>{
-  const f=e.target.files[0];if(!f)return;
-  let data;try{data=JSON.parse(await f.text());}catch{alert('Invalid JSON file');return;}
-  st.zones.forEach(z=>map.removeLayer(z.layer));st.zones=[];
-  data.forEach(d=>{
-    const s=sty(d.type);let layer;
-    const loadStyle = {color:'#f85149',weight:2,opacity:0.8,fillColor:'#f85149',fillOpacity:0.3};
-    if(d.geo.type==='circle')layer=L.circle(d.geo.center,{radius:d.geo.radius,...loadStyle});
-    else if(d.geo.type==='rect')layer=L.rectangle([[d.geo.bounds._southWest.lat,d.geo.bounds._southWest.lng],[d.geo.bounds._northEast.lat,d.geo.bounds._northEast.lng]],loadStyle);
-    else layer=L.polygon(d.geo.latlngs,loadStyle);
-    if(d.isMiss) layer._isMiss=true;
-    if(d.isInverted) layer._isInverted=true;
-    layer.addTo(map);
-    layer.on('click',ev=>{L.DomEvent.stopPropagation(ev);if(st.mode==='sel')selZone(d.id);});
-    st.zones.push({id:d.id,lbl:d.lbl,type:d.type,layer});
-  });
-  renderList();e.target.value='';
-});
-document.getElementById('btn-clear').addEventListener('click',()=>{
-  if(!st.zones.length)return;
-  showConfirm(`All ${st.zones.length} zone(s) delete?`, ()=>{
-    st.zones.forEach(z=>map.removeLayer(z.layer));
-    st.zones=[];st.selId=null;
-    fbClearZones();
-    renderList();
-  });
-});
 
 // ── ZONE PANEL ────────────────────────────────────────────
 function openZonePanel() {
@@ -1960,23 +1915,6 @@ function fbInit(pwHash) {
   setTimeout(() => input.focus(), 100);
 })();
 
-document.getElementById('btn-share').addEventListener('click', () => {
-  const url = location.href;
-  try {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(() => tip('Link kopiert!')).catch(() => prompt('Link:', url));
-    } else {
-      const ta = document.createElement('textarea');
-      ta.value = url;
-      ta.style.cssText = 'position:fixed;opacity:0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-      tip('Link kopiert!');
-    }
-  } catch(e) { prompt('Link:', url); }
-});
 
 window.addEventListener('beforeunload', () => {
   if (locationWatch) navigator.geolocation.clearWatch(locationWatch);
