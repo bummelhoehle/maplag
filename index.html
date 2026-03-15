@@ -171,17 +171,7 @@ html,body{height:100%;overflow:hidden}
           <div id="search-results"></div>
         </div>
       </div>
-      <div id="radius-popup">
-        <p>RADAR AROUND YOUR LOCATION</p>
-        <div class="row">
-          <input type="number" id="radius-km" min="0.1" max="500" step="0.1" value="5">
-          <span style="font-size:12px;color:#8b949e">km</span>
-        </div>
-        <div class="row" style="margin-top:8px;gap:6px">
-          <button class="tb-btn" id="btn-ok-hit" style="flex:1;border-color:#3fb950;color:#3fb950;background:rgba(63,185,80,.08)">✓ Hit</button>
-          <button class="tb-btn" id="btn-ok-miss" style="flex:1;border-color:#f85149;color:#f85149;background:rgba(248,81,73,.08)">✗ Miss</button>
-        </div>
-      </div>
+      <div id="radius-popup" style="display:none"></div>
     </div>
     <div id="sidebar">
       <div id="sidebar-title">ZONES (<span id="zone-count">0</span>)</div>
@@ -191,6 +181,53 @@ html,body{height:100%;overflow:hidden}
   <div id="statusbar">
     Mode: <span id="st-mode">Pan</span>
     &nbsp;|&nbsp; Zones: <span id="st-count">0</span>
+  </div>
+</div>
+
+<!-- RADAR SHEET -->
+<div id="radar-sheet" class="bottom-sheet">
+  <div class="sheet-box">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>◎ Radar</h3>
+      <button class="sheet-close" id="btn-radar-close">×</button>
+    </div>
+    <div class="sheet-body">
+      <div style="font-size:12px;color:#8b949e;margin-bottom:12px">Draws a circle around your current GPS location.</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <input type="number" id="radius-km" min="0.1" max="500" step="0.1" value="5"
+          style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-size:16px;padding:10px 12px;outline:none">
+        <span style="font-size:13px;color:#8b949e">km</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button id="btn-ok-hit" style="flex:1;padding:13px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.08);color:#f85149;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✓ Hit</button>
+        <button id="btn-ok-miss" style="flex:1;padding:13px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.08);color:#f85149;font-size:14px;font-weight:600;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✗ Miss</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MEASURING SHEET -->
+<div id="meas-sheet" class="bottom-sheet">
+  <div class="sheet-box">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>📏 Measuring</h3>
+      <button class="sheet-close" id="btn-meas-sheet-close">×</button>
+    </div>
+    <div class="sheet-body">
+      <div style="font-size:12px;color:#8b949e;margin-bottom:12px">Search a location via 🔍, then tap Hit or Miss.</div>
+      <div id="meas-selected" style="display:none;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+        <div id="meas-selected-name" style="font-size:14px;font-weight:600;color:#f0c040"></div>
+        <div id="meas-selected-dist" style="font-size:12px;color:#8b949e;margin-top:3px"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button id="btn-meas-green" style="flex:1;padding:13px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.08);color:#f85149;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✓ Hit</button>
+        <button id="btn-meas-red" style="flex:1;padding:13px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.08);color:#f85149;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✗ Miss</button>
+      </div>
+      <div id="meas-log" style="display:none;margin-bottom:10px;max-height:100px;overflow-y:auto;border-top:1px solid #30363d;padding-top:8px"></div>
+      <button id="btn-meas-clear" style="width:100%;padding:9px;border-radius:8px;border:1px solid #30363d;background:transparent;color:#6e7681;font-size:12px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">🗑 Clear circles</button>
+    </div>
   </div>
 </div>
 
@@ -261,21 +298,6 @@ html,body{height:100%;overflow:hidden}
 </div>
 
 <!-- MEASURING PANEL -->
-<div id="meas-box" style="display:none;position:fixed;bottom:80px;left:10px;right:10px;z-index:9500;max-width:360px;pointer-events:all">
-  <div style="background:#161b22;border:2px solid #f0c040;border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,.7)">
-    <div style="font-size:12px;color:#8b949e;margin-bottom:12px">Search a location via 🔍, then tap Hit or Miss.</div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button id="btn-meas-green" style="flex:1;padding:13px;border-radius:10px;border:1px solid #3fb950;background:rgba(63,185,80,.08);color:#3fb950;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✓ Hit</button>
-      <button id="btn-meas-red" style="flex:1;padding:13px;border-radius:10px;border:1px solid #f85149;background:rgba(248,81,73,.08);color:#f85149;font-size:14px;font-weight:600;opacity:0.4;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✗ Miss</button>
-    </div>
-    <div id="meas-log" style="display:none;margin-bottom:10px;max-height:100px;overflow-y:auto;border-top:1px solid #30363d;padding-top:8px"></div>
-    <div style="display:flex;gap:8px">
-      <button id="btn-meas-clear" style="flex:1;padding:9px;border-radius:8px;border:1px solid #30363d;background:transparent;color:#6e7681;font-size:12px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">🗑 Clear</button>
-      <button id="btn-meas-close" style="flex:1;padding:9px;border-radius:8px;border:1px solid #30363d;background:transparent;color:#6e7681;font-size:12px;-webkit-tap-highlight-color:transparent;touch-action:manipulation">✕ Close</button>
-    </div>
-  </div>
-</div>
-
 
 
 
@@ -646,7 +668,7 @@ document.querySelectorAll('[data-mode]').forEach(b=>{
       st.mode = 'none';
       document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
       map.dragging.enable();
-      document.getElementById('radius-popup').style.display='none';
+      document.getElementById('radar-sheet').classList.remove('open');
       document.getElementById('st-mode').textContent='Pan';
       tip('Pan mode — drawing disabled');
       return;
@@ -656,10 +678,10 @@ document.querySelectorAll('[data-mode]').forEach(b=>{
     document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     document.getElementById('st-mode').textContent = MODE_LABELS[st.mode]||st.mode;
-    document.getElementById('radius-popup').style.display='none';
+    document.getElementById('radar-sheet').classList.remove('open');
     // Radar: Popup sofort öffnen
     if(st.mode==='circ'){
-      document.getElementById('radius-popup').style.display='block';
+      document.getElementById('radar-sheet').classList.add('open');
       setTimeout(()=>document.getElementById('radius-km').focus(),100);
       return;
     }
@@ -753,7 +775,7 @@ function invertedCircleLayer(lat, lng, radiusM, style) {
 async function drawRadar(hit) {
   const km = parseFloat(document.getElementById('radius-km').value);
   if(isNaN(km)||km<=0) return;
-  document.getElementById('radius-popup').style.display='none';
+  document.getElementById('radar-sheet').classList.remove('open');
   st.mode='none';
   document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
   document.getElementById('st-mode').textContent='Pan';
@@ -775,13 +797,18 @@ async function drawRadar(hit) {
 document.getElementById('btn-ok-hit').addEventListener('click', ()=>drawRadar(true));
 document.getElementById('btn-ok-miss').addEventListener('click', ()=>drawRadar(false));
 document.getElementById('radius-km').onkeydown=e=>{if(e.key==='Enter')drawRadar(true);};
+document.getElementById('btn-radar-close').addEventListener('click', ()=>{
+  document.getElementById('radar-sheet').classList.remove('open');
+  document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
+  st.mode='none';
+});
 
 // ── TOUCH EVENTS — native, komplett unabhängig von Leaflet-Layer-Events ──
 const mc=map.getContainer();
 
 mc.addEventListener('touchstart',e=>{
   if(document.querySelector('.bottom-sheet.open'))return;
-  if(document.getElementById('meas-box').style.display!=='none')return;
+  if(document.getElementById('meas-sheet').classList.contains('open'))return;
   if(st.mode==='none'||st.mode==='circ')return;
   e.preventDefault();
   const ll=llFromTouch(e);if(!ll)return;
@@ -795,7 +822,7 @@ mc.addEventListener('touchstart',e=>{
 
 mc.addEventListener('touchmove',e=>{
   if(document.querySelector('.bottom-sheet.open'))return;
-  if(document.getElementById('meas-box').style.display!=='none')return;
+  if(document.getElementById('meas-sheet').classList.contains('open'))return;
   if(!st.drawing)return;
   e.preventDefault();
   const ll=llFromTouch(e);if(!ll)return;
@@ -1208,7 +1235,7 @@ const meas = {
 };
 
 function measOpen() {
-  document.getElementById('meas-box').style.display = 'block';
+  document.getElementById('meas-sheet').classList.add('open');
   document.getElementById('btn-measuring').classList.add('active');
   // Schritt 1: Standort sofort aus GPS holen
   measUpdateMyPos();
@@ -1275,17 +1302,21 @@ async function measDraw(closer) {
   if (meas.refMarker) { map.removeLayer(meas.refMarker); meas.refMarker = null; }
   document.getElementById('btn-meas-green').style.opacity = '0.4';
   document.getElementById('btn-meas-red').style.opacity = '0.4';
+  // Close sheet
+  document.getElementById('meas-sheet').classList.remove('open');
+  document.getElementById('btn-measuring').classList.remove('active');
+  document.getElementById('meas-selected').style.display = 'none';
 }
 
 document.getElementById('btn-measuring').addEventListener('click', () => {
-  const box = document.getElementById('meas-box');
-  if (box.style.display === 'none') { measOpen(); } else {
-    box.style.display = 'none';
+  const isOpen = document.getElementById('meas-sheet').classList.contains('open');
+  if (!isOpen) { measOpen(); } else {
+    document.getElementById('meas-sheet').classList.remove('open');
     document.getElementById('btn-measuring').classList.remove('active');
   }
 });
-document.getElementById('btn-meas-close').addEventListener('click', () => {
-  document.getElementById('meas-box').style.display = 'none';
+document.getElementById('btn-meas-sheet-close').addEventListener('click', () => {
+  document.getElementById('meas-sheet').classList.remove('open');
   document.getElementById('btn-measuring').classList.remove('active');
 });
 document.getElementById('btn-meas-green').addEventListener('click', () => measDraw(true));
@@ -1298,7 +1329,7 @@ document.getElementById('btn-meas-clear').addEventListener('click', () => {
 
 // GPS aktualisiert → Schritt 1 updaten falls Panel offen
 setInterval(() => {
-  if (document.getElementById('meas-box').style.display !== 'none') measUpdateMyPos();
+  if (document.getElementById('meas-sheet').classList.contains('open')) measUpdateMyPos();
 }, 3000);
 
 // ── UNITS (metric / imperial) ─────────────────────────────
