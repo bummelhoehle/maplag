@@ -507,7 +507,6 @@ const tileProvidersLang = {
 let tileProviders = tileProvidersDefault;
 let mapLang = localStorage.getItem('mapLang') || 'de';
 
-let tileIndex = 0;
 let currentTile = null;
 
 function getActiveTileProviders() {
@@ -765,30 +764,7 @@ function delZone(id){
   renderList();
 }
 
-function renderList(){
-  const n=st.zones.length;
-  document.getElementById('zone-count').textContent=n;
-  document.getElementById('st-count').textContent=n;
-  const el=document.getElementById('zone-list');
-  if(!n){el.innerHTML='<div class="empty">Noch keine Zonen.<br>'+(isTouchDevice?'Zeichne auf der Karte.':'Zeichne auf der Karte.')+'</div>';return;}
-  el.innerHTML=st.zones.map(z=>`
-    <div class="zone-item${z.id===st.selId?' sel':''}" data-id="${z.id}">
-      <div class="zone-dot" style="background:${COLORS[z.type].fill}"></div>
-      <div class="zone-name">${z.lbl}</div>
-      <button class="zone-del" data-del="${z.id}">×</button>
-    </div>`).join('');
-  el.querySelectorAll('.zone-item').forEach(el2=>{
-    el2.addEventListener('click',e=>{
-      if(e.target.dataset.del)return;
-      selZone(el2.dataset.id);
-      const z=st.zones.find(z=>z.id===el2.dataset.id);
-      if(z)try{map.fitBounds(z.layer.getBounds(),{padding:[30,30]});}catch(e){}
-    });
-  });
-  el.querySelectorAll('[data-del]').forEach(b=>{
-    b.addEventListener('click',e=>{e.stopPropagation();delZone(b.dataset.del);});
-  });
-}
+function renderList(){ renderZonePanel(); }
 
 document.querySelectorAll('[data-mode]').forEach(b=>{
   b.addEventListener('click',()=>{
@@ -1276,7 +1252,7 @@ document.getElementById('btn-tp-start').addEventListener('click', () => {
 
 // STOP Button
 document.getElementById('btn-tp-stop').addEventListener('click', () => {
-  if (!tp.startPos) { tip('Zuerst Start pressn'); return; }
+  if (!tp.startPos) { tip('Zuerst Start drücken'); return; }
   tpGetGPS(pos => {
     tp.stopPos = pos;
     tpAddMarker(pos.lat, pos.lng, '#f0c040', 'Stop');
@@ -1385,12 +1361,10 @@ function measOpen() {
 }
 
 function measUpdateMyPos() {
-  if (locationMarker) {
-    const ll = locationMarker.getLatLng();
-    meas.myLat = ll.lat;
-    meas.myLng = ll.lng;
-          } else {
-          }
+  if (!locationMarker) return;
+  const ll = locationMarker.getLatLng();
+  meas.myLat = ll.lat;
+  meas.myLng = ll.lng;
   measRecalc();
 }
 
@@ -1399,7 +1373,8 @@ function measSelectFromSearch(lat, lng, name) {
   meas.refLat = lat;
   meas.refLng = lng;
   meas.refName = name;
-      // Referenz-Marker
+  document.getElementById('meas-selected-name').textContent = name;
+  document.getElementById('meas-selected').style.display = 'block';
   if (meas.refMarker) map.removeLayer(meas.refMarker);
   meas.refMarker = L.circleMarker([lat, lng], {
     radius: 10, color: '#fff', fillColor: '#f0c040', fillOpacity: 1, weight: 2.5
@@ -1413,7 +1388,7 @@ function measRecalc() {
   if (meas.myLat && meas.refLat) {
     meas.radius = haversine(meas.myLat, meas.myLng, meas.refLat, meas.refLng);
     const km = (meas.radius / 1000).toFixed(1);
-            // Buttons aktivieren
+    document.getElementById('meas-selected-dist').textContent = `${km} ${unitLabel()} from your location`;
     document.getElementById('btn-meas-green').style.opacity = '1';
     document.getElementById('btn-meas-red').style.opacity = '1';
   }
@@ -1573,7 +1548,6 @@ tip(T.start, 4000);
     idx = i;
     const s = states[idx];
     tileProviders = s.providers;
-    tileIndex = 0;
     loadTiles(0);
     btn.textContent = s.icon;
     btn.title = s.lbl;
@@ -1582,6 +1556,10 @@ tip(T.start, 4000);
   apply(idx);
   btn.addEventListener('click', () => apply((idx + 1) % states.length));
 })();
+
+window.addEventListener('beforeunload', () => {
+  if (locationWatch) navigator.geolocation.clearWatch(locationWatch);
+});
 
 }); // end window.addEventListener('load')
 </script>
