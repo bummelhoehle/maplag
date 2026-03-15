@@ -269,6 +269,24 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
   </div>
 </div>
 
+<!-- DRAW SHEET -->
+<div id="draw-sheet" class="bottom-sheet">
+  <div class="sheet-box">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>✏ Draw Zone</h3>
+      <button class="sheet-close" id="btn-draw-close">×</button>
+    </div>
+    <div class="sheet-body">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px">Zone-Typ auswählen, dann auf der Karte zeichnen.</div>
+      <div style="display:flex;gap:8px">
+        <button id="btn-draw-hit" class="sh-btn hit" style="flex:1">✓ Hit</button>
+        <button id="btn-draw-miss" class="sh-btn miss" style="flex:1">✗ Miss</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- RADAR SHEET -->
 <div id="radar-sheet" class="bottom-sheet">
   <div class="sheet-box">
@@ -490,7 +508,7 @@ document.getElementById('btn-thermo-close').addEventListener('click', () => {
 const COLORS={seeker:{fill:'#f85149',stroke:'#f85149'},hider:{fill:'#58a6ff',stroke:'#58a6ff'},neutral:{fill:'#3fb950',stroke:'#3fb950'},custom:{fill:'#d29922',stroke:'#d29922'}};
 const MODE_LABELS={move:'Pan',free:'Draw',circ:'Radar'};
 const TYPE_LABELS={seeker:'Seeker',hider:'Hider',neutral:'Neutral',custom:'Custom'};
-const st={mode:'none',type:'hider',zones:[],selId:null,drawing:false,startLL:null,prevLayer:null,freePoints:[],freeLayer:null,pendCenter:null,labelCb:null};
+const st={mode:'none',type:'hider',drawType:'miss',zones:[],selId:null,drawing:false,startLL:null,prevLayer:null,freePoints:[],freeLayer:null,pendCenter:null,labelCb:null};
 
 const map=L.map('map',{center:[51.1,10.4],zoom:6,zoomControl:false,tap:true,tapTolerance:15});
 L.control.zoom({position:'topleft'}).addTo(map);
@@ -787,15 +805,18 @@ async function addZone(mkLayer, def, askName=false) {
   const testLayer = mkLayer({});
   const isInverted = testLayer._isInverted;
   const isMiss = testLayer._isMiss;
+  const isHit = testLayer._isHit;
   map.removeLayer(testLayer);
 
   let layer;
-  if (isInverted || isMiss) {
+  if (isHit) {
+    layer = mkLayer({ color:'#3fbf6e', weight:2, opacity:0.8, fillColor:'#3fbf6e', fillOpacity:0.3 });
+    layer._isHit = true;
+  } else if (isInverted || isMiss) {
     layer = mkLayer({ color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3 });
     if (isInverted) layer._isInverted = true;
     if (isMiss) layer._isMiss = true;
   } else {
-    // Default: treat as Miss zone
     layer = mkLayer({ color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3 });
     layer._isMiss = true;
   }
@@ -829,6 +850,7 @@ document.querySelectorAll('[data-mode]').forEach(b=>{
       document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
       map.dragging.enable();
       document.getElementById('radar-sheet').classList.remove('open');
+      document.getElementById('draw-sheet').classList.remove('open');
       document.getElementById('st-mode').textContent='Pan';
       return;
     }
@@ -838,10 +860,15 @@ document.querySelectorAll('[data-mode]').forEach(b=>{
     b.classList.add('active');
     document.getElementById('st-mode').textContent = MODE_LABELS[st.mode]||st.mode;
     document.getElementById('radar-sheet').classList.remove('open');
-    // Radar: Popup sofort öffnen
+    document.getElementById('draw-sheet').classList.remove('open');
     if(st.mode==='circ'){
       document.getElementById('radar-sheet').classList.add('open');
+      if (!locationMarker) setRadarMode(true);
       setTimeout(()=>document.getElementById('radius-km').focus(),100);
+      return;
+    }
+    if(st.mode==='free'){
+      document.getElementById('draw-sheet').classList.add('open');
       return;
     }
     tip({free:T.free}[st.mode]);
@@ -894,19 +921,29 @@ map.on('mousemove',(e)=>{
     st.freePoints.push(e.latlng);
     const hull=convexHull(st.freePoints);
     if(hull.length>1){
-      if(!st.freeLayer) st.freeLayer=L.polygon(hull,{...sty(st.type),dashArray:'4 3',opacity:.4}).addTo(map);
+      const dc=st.drawType==='hit'?'#3fbf6e':'#f85149';
+      if(!st.freeLayer) st.freeLayer=L.polygon(hull,{color:dc,fillColor:dc,fillOpacity:0.25,weight:1.5,dashArray:'4 3',opacity:.6}).addTo(map);
       else st.freeLayer.setLatLngs(hull);
     }
   }
 });
-map.on('mouseup',async(e)=>{
-  if(st.mode==='free'&&st.drawing){
-    st.drawing=false;map.dragging.enable();
-    if(st.freeLayer){map.removeLayer(st.freeLayer);st.freeLayer=null;}
-    const pts=convexHull(st.freePoints);st.freePoints=[];
-    if(pts.length<3)return;
-    await addZone(s=>{const l=L.polygon(pts,{...s,color:'#f85149',fillColor:'#f85149'});l._isMiss=true;return l;},'Draw zone',true);
+async function finishFreeDraw() {
+  st.drawing=false; map.dragging.enable();
+  if(st.freeLayer){map.removeLayer(st.freeLayer);st.freeLayer=null;}
+  const pts=convexHull(st.freePoints); st.freePoints=[];
+  if(pts.length<3)return;
+  const isHit=st.drawType==='hit';
+  if (isHit) {
+    await addZone(s=>{const l=invertedPolyLayer(pts,s);return l||L.polygon(pts,s);},'Draw zone',true);
+  } else {
+    await addZone(s=>{const l=L.polygon(pts,s);l._isMiss=true;return l;},'Draw zone',true);
   }
+  // Reset to Pan — same behavior as Radar/Measuring
+  st.mode='none';
+  document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
+}
+map.on('mouseup',async(e)=>{
+  if(st.mode==='free'&&st.drawing) await finishFreeDraw();
 });
 
 // Kreis-Mode: Popup sofort beim Aktivieren anzeigen
@@ -914,6 +951,24 @@ map.on('click',async(e)=>{
   if(st.mode!=='circ')return;
   // Bereits durch mode-switch open, ignorieren
 });
+// Inverted polygon: world minus polygon = everything OUTSIDE
+function invertedPolyLayer(pts, style) {
+  try {
+    const coords = pts.map(p => [p.lng, p.lat]);
+    if (coords[0][0] !== coords[coords.length-1][0] || coords[0][1] !== coords[coords.length-1][1])
+      coords.push(coords[0]);
+    const inner = turf.polygon([coords]);
+    const world = turf.polygon([[[-180,-85],[180,-85],[180,85],[-180,85],[-180,-85]]]);
+    const inverted = turf.difference(world, inner);
+    if (!inverted) return null;
+    const rings = inverted.geometry.coordinates.map(ring => ring.map(c => L.latLng(c[1], c[0])));
+    const layer = L.polygon(rings, style);
+    layer._isInverted = true;
+    layer._origLatLngs = pts.map(p => [p.lat, p.lng]);
+    return layer;
+  } catch(e) { return null; }
+}
+
 // Inverted circle: world minus circle = everything OUTSIDE
 function invertedCircleLayer(lat, lng, radiusM, style) {
   const steps = 64;
@@ -988,6 +1043,19 @@ document.getElementById('btn-radar-close').addEventListener('click', ()=>{
   st.mode='none';
 });
 
+function startFreeDrawWith(type) {
+  st.drawType = type;
+  document.getElementById('draw-sheet').classList.remove('open');
+  tip(type === 'hit' ? 'Draw a Hit zone' : 'Draw a Miss zone');
+}
+document.getElementById('btn-draw-hit').addEventListener('click',  () => startFreeDrawWith('hit'));
+document.getElementById('btn-draw-miss').addEventListener('click', () => startFreeDrawWith('miss'));
+document.getElementById('btn-draw-close').addEventListener('click', () => {
+  document.getElementById('draw-sheet').classList.remove('open');
+  cancelDraw(); st.mode='none';
+  document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
+});
+
 // ── TOUCH EVENTS — native, komplett unabhängig von Leaflet-Layer-Events ──
 const mc=map.getContainer();
 
@@ -1015,7 +1083,8 @@ mc.addEventListener('touchmove',e=>{
     st.freePoints.push(ll);
     const hull=convexHull(st.freePoints);
     if(hull.length>1){
-      if(!st.freeLayer) st.freeLayer=L.polygon(hull,{...sty(st.type),dashArray:'4 3',opacity:.4}).addTo(map);
+      const dc=st.drawType==='hit'?'#3fbf6e':'#f85149';
+      if(!st.freeLayer) st.freeLayer=L.polygon(hull,{color:dc,fillColor:dc,fillOpacity:0.25,weight:1.5,dashArray:'4 3',opacity:.6}).addTo(map);
       else st.freeLayer.setLatLngs(hull);
     }
   }
@@ -1024,14 +1093,7 @@ mc.addEventListener('touchmove',e=>{
 mc.addEventListener('touchend',async e=>{
   if(!st.drawing)return;
   e.preventDefault();
-  map.dragging.enable();
-  if(st.mode==='free'&&st.drawing){
-    st.drawing=false;
-    if(st.freeLayer){map.removeLayer(st.freeLayer);st.freeLayer=null;}
-    const pts=convexHull(st.freePoints);st.freePoints=[];
-    if(pts.length<3)return;
-    await addZone(s=>{const l=L.polygon(pts,{...s,color:'#f85149',fillColor:'#f85149'});l._isMiss=true;return l;},'Draw zone',true);
-  }
+  if(st.mode==='free'&&st.drawing) await finishFreeDraw();
 },{passive:false});
 
 document.getElementById('btn-save').addEventListener('click',()=>{
@@ -1777,7 +1839,9 @@ function fbRoomPath() { return `${fbPwHash}/${FB_ROOM}`; }
 function serializeZone(z) {
   const l = z.layer;
   let geo;
-  if (l._isInverted) {
+  if (l._isInverted && l._origLatLngs) {
+    geo = {type:'poly-inv', latlngs: l._origLatLngs};
+  } else if (l._isInverted) {
     geo = {type:'circle', center:{lat:l._origLat, lng:l._origLng}, radius:l._origRadius};
   } else if (l instanceof L.Circle) {
     const ll = l.getLatLng();
@@ -1785,15 +1849,22 @@ function serializeZone(z) {
   } else {
     geo = {type:'poly', latlngs: l.getLatLngs()[0].map(p => [p.lat, p.lng])};
   }
-  return {lbl:z.lbl, isMiss:!!l._isMiss, isInverted:!!l._isInverted, geo};
+  return {lbl:z.lbl, isMiss:!!l._isMiss, isInverted:!!l._isInverted, isHit:!!l._isHit, geo};
 }
 
 function deserializeZone(id, data) {
   const style = {color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3};
   let layer;
-  if (data.isInverted) {
+  if (data.isInverted && data.geo.type === 'poly-inv') {
+    const pts = data.geo.latlngs.map(p => L.latLng(p[0], p[1]));
+    layer = invertedPolyLayer(pts, style) || L.polygon(pts, style);
+  } else if (data.isInverted) {
     const c = data.geo.center;
     layer = invertedCircleLayer(c.lat, c.lng, data.geo.radius, style);
+  } else if (data.isHit) {
+    const hs = {...style, color:'#3fbf6e', fillColor:'#3fbf6e'};
+    layer = L.polygon(data.geo.latlngs, hs);
+    layer._isHit = true;
   } else if (data.geo.type === 'circle') {
     layer = L.circle([data.geo.center.lat, data.geo.center.lng], {radius:data.geo.radius, ...style});
     layer._isMiss = true;
