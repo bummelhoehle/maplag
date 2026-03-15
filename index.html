@@ -163,9 +163,10 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     grid-template-columns:repeat(5,1fr);
     gap:4px;
   }
-  /* Search spans full top row of the toolbar grid */
+  /* Locate button left of search in top row */
+  #btn-locate{grid-column:1;grid-row:1;align-self:center}
   #search-wrap{
-    grid-column:1/-1;
+    grid-column:2/-1;
     grid-row:1;
     position:relative;
     width:auto;
