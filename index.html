@@ -399,6 +399,17 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
   </div>
 </div>
 
+<div id="pw-modal" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r14);padding:28px 24px;width:min(320px,92vw);box-shadow:0 16px 48px rgba(0,0,0,.7)">
+    <div style="font-size:18px;font-weight:700;color:var(--gold);margin-bottom:6px">🔒 MapLag</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:18px">Gruppenpasswort eingeben um beizutreten</div>
+    <input type="password" id="pw-input" placeholder="Passwort…" autocomplete="off"
+      style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:14px;padding:10px 12px;outline:none;box-sizing:border-box;margin-bottom:6px">
+    <div id="pw-error" style="display:none;font-size:11px;color:var(--red);margin-bottom:10px">Falsches Passwort</div>
+    <button id="pw-submit" class="sh-btn hit" style="width:100%">Beitreten</button>
+  </div>
+</div>
+
 <div id="label-modal">
   <div id="label-box">
     <h3>Name zone</h3>
@@ -1749,6 +1760,18 @@ if (!_roomParam) {
 
 let fbDb = null;
 let fbReceiving = false;
+let fbPwHash = null;
+
+function _pwHash(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
+
+function fbRoomPath() { return `${fbPwHash}/${FB_ROOM}`; }
 
 function serializeZone(z) {
   const l = z.layer;
@@ -1784,23 +1807,23 @@ function deserializeZone(id, data) {
 
 function fbWriteZone(id, data) {
   if (!fbDb || fbReceiving) return;
-  fbDb.ref(`rooms/${FB_ROOM}/zones/${id}`).set(data);
+  fbDb.ref(`${fbRoomPath()}/zones/${id}`).set(data);
 }
 function fbDeleteZone(id) {
   if (!fbDb || fbReceiving) return;
-  fbDb.ref(`rooms/${FB_ROOM}/zones/${id}`).remove();
+  fbDb.ref(`${fbRoomPath()}/zones/${id}`).remove();
 }
 function fbClearZones() {
   if (!fbDb) return;
-  fbDb.ref(`rooms/${FB_ROOM}/zones`).remove();
+  fbDb.ref(`${fbRoomPath()}/zones`).remove();
 }
 function fbWriteThermos() {
   if (!fbDb || fbReceiving) return;
-  fbDb.ref(`rooms/${FB_ROOM}/thermos`).set(tp.constraints.length ? tp.constraints : null);
+  fbDb.ref(`${fbRoomPath()}/thermos`).set(tp.constraints.length ? tp.constraints : null);
 }
 
 function fbListen() {
-  fbDb.ref(`rooms/${FB_ROOM}`).on('value', snap => {
+  fbDb.ref(fbRoomPath()).on('value', snap => {
     const data = snap.val() || {};
     fbReceiving = true;
 
@@ -1820,14 +1843,49 @@ function fbListen() {
   });
 }
 
-(function fbInit() {
+function fbInit(pwHash) {
+  fbPwHash = pwHash;
   if (!FB_CONFIG.apiKey || FB_CONFIG.apiKey === 'PASTE_API_KEY') return;
   try {
-    firebase.initializeApp(FB_CONFIG);
+    if (!firebase.apps.length) firebase.initializeApp(FB_CONFIG);
     fbDb = firebase.database();
     fbListen();
-    tip(`Room: ${FB_ROOM} — URL kopiert!`, 3000);
   } catch(e) { console.error('Firebase init:', e); }
+}
+
+// Passwort-Modal
+(function() {
+  const modal = document.getElementById('pw-modal');
+  const input = document.getElementById('pw-input');
+  const error = document.getElementById('pw-error');
+
+  // Firebase nicht konfiguriert → kein Login nötig
+  if (!FB_CONFIG.apiKey || FB_CONFIG.apiKey === 'PASTE_API_KEY') {
+    modal.style.display = 'none';
+    return;
+  }
+
+  // Passwort aus sessionStorage wiederverwenden
+  const saved = sessionStorage.getItem('_mpw');
+  if (saved) { modal.style.display = 'none'; fbInit(saved); return; }
+
+  function submit() {
+    const pw = input.value.trim();
+    if (!pw) { input.focus(); return; }
+
+    // Passwort gegen Firebase prüfen: Test-Pfad lesen
+    // Falsches Passwort → leere Daten (kein Fehler), richtiges → Daten vorhanden
+    // Für sofortige Prüfung: Sentinel-Wert unter bekanntem Pfad speichern
+    // Einfacher: Hash nehmen, loslegen — falsches PW → leerer Room
+    const hash = _pwHash(pw);
+    sessionStorage.setItem('_mpw', hash);
+    modal.style.display = 'none';
+    fbInit(hash);
+  }
+
+  document.getElementById('pw-submit').addEventListener('click', submit);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+  setTimeout(() => input.focus(), 100);
 })();
 
 document.getElementById('btn-share').addEventListener('click', () => {
