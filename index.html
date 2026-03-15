@@ -520,12 +520,19 @@ let displayLayer = null;
 
 function rebuildDisplay() {
   if (displayLayer) { map.removeLayer(displayLayer); displayLayer = null; }
-  // Remove old inverted display layers
+
+  // Handle inverted zones separately — render with visible style
   st.zones.filter(z => z.layer._isInverted).forEach(z => {
-    if (z._invertedDisplay) { map.removeLayer(z._invertedDisplay); z._invertedDisplay = null; }
-    z.layer.addTo(map); // show directly
+    if (!map.hasLayer(z.layer)) {
+      z.layer.setStyle({
+        color: '#3fb950', weight: 2, opacity: 0.8,
+        fillColor: '#3fb950', fillOpacity: 0.3
+      });
+      z.layer.addTo(map);
+    }
   });
 
+  // Normal zones → union display
   const normalZones = st.zones.filter(z => !z.layer._isInverted);
   if (normalZones.length === 0) return;
 
@@ -557,8 +564,20 @@ async function addZone(mkLayer, def) {
   if (!lbl) return;
 
   const id = genId();
-  // Zone-Layer unsichtbar speichern (opacity 0) — nur geometry carrier
-  const layer = mkLayer({ color:'transparent', weight:0, fillColor:'transparent', fillOpacity:0 });
+  // Inverted layers get their own style; normal zones stored invisible for union display
+  const testLayer = mkLayer({});
+  const isInverted = testLayer._isInverted;
+  map.removeLayer(testLayer);
+
+  let layer;
+  if (isInverted) {
+    layer = mkLayer({
+      color: '#3fb950', weight: 2, opacity: 0.8,
+      fillColor: '#3fb950', fillOpacity: 0.3
+    });
+  } else {
+    layer = mkLayer({ color:'transparent', weight:0, fillColor:'transparent', fillOpacity:0 });
+  }
   layer.addTo(map);
   bindLayerEvents(layer, id);
   st.zones.push({id, lbl, type: st.type, layer});
