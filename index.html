@@ -242,7 +242,6 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       <button class="tb-btn" id="btn-measuring"><span class="tb-icon">📏</span><span class="tb-lbl">Measure</span></button>
     </div>
     <div class="sep"></div>
-    <button class="tb-btn" id="btn-opnv"><span class="tb-icon">🚌</span><span class="tb-lbl">Transit</span></button>
     <button class="tb-btn" id="btn-locate" title="Center on my location"><span class="tb-icon">⊕</span><span class="tb-lbl">Locate</span></button>
     <div class="spacer"></div>
     <button class="tb-btn" id="btn-zones"><span class="tb-icon">📋</span><span class="tb-lbl">Zones</span></button>
@@ -470,6 +469,8 @@ const UnitsControl = L.Control.extend({
   }
 });
 new UnitsControl().addTo(map);
+
+// Transit control added after toggleOpnv is defined (see below)
 // Multiple tile providers with automatic fallback
 const tileProviders = [
   {
@@ -511,7 +512,7 @@ let opnvVisible = false;
 
 function toggleOpnv() {
   opnvVisible = !opnvVisible;
-  const btn = document.getElementById('btn-opnv');
+  const btn = document.querySelector('#btn-opnv');
   if (opnvVisible) {
     if (!opnvLayer) {
       // OpenRailwayMap — funktioniert ohne CORS-Probleme
@@ -532,7 +533,20 @@ function toggleOpnv() {
   }
 }
 
-document.getElementById('btn-opnv').addEventListener('click', toggleOpnv);
+// Transit as Leaflet control (after toggleOpnv defined)
+const TransitControl = L.Control.extend({
+  options: {position:'topleft'},
+  onAdd: function() {
+    const btn = L.DomUtil.create('button','leaflet-bar leaflet-control units-ctrl');
+    btn.id = 'btn-opnv';
+    btn.textContent = '🚌';
+    btn.title = 'Toggle transit layer';
+    L.DomEvent.disableClickPropagation(btn);
+    L.DomEvent.on(btn, 'click', toggleOpnv);
+    return btn;
+  }
+});
+new TransitControl().addTo(map);
 
 // ── STANDORT (automatisch aktiv) ─────────────────────────
 let locationMarker = null;
