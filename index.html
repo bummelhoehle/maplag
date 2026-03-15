@@ -331,6 +331,7 @@ if (isMobile) {
   document.getElementById('btn-clear').textContent = '🗑';
   document.getElementById('btn-opnv').textContent  = '🚌';
   document.getElementById('btn-zones').textContent = '📋';  document.getElementById('btn-thermo').textContent = '🌡';
+  document.getElementById('btn-measuring').textContent = '📏';
   const sidebar = document.getElementById('sidebar');
   if (sidebar) sidebar.style.display = 'none';
 }
@@ -533,12 +534,6 @@ function bindLayerEvents(layer, id) {
   });
 }
 
-// Unsichtbarer Geometrie-Layer pro Zone (for Events/Selektion)
-// Ein sichtbarer Union-Display-Layer for alle Zonen zusammen
-function rebuildDisplay() {
-  // Each zone is already on the map with its own style — nothing to do
-}
-
 async function addZone(mkLayer, def) {
   const lbl = await askLabel(def);
   if (!lbl) return;
@@ -555,7 +550,9 @@ async function addZone(mkLayer, def) {
     if (isInverted) layer._isInverted = true;
     if (isMiss) layer._isMiss = true;
   } else {
-    layer = mkLayer({ color:'#58a6ff', weight:2, opacity:0.8, fillColor:'#58a6ff', fillOpacity:0.2 });
+    // Default: treat as Miss zone
+    layer = mkLayer({ color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3 });
+    layer._isMiss = true;
   }
   layer.addTo(map);
   bindLayerEvents(layer, id);
@@ -795,7 +792,7 @@ document.getElementById('btn-save').addEventListener('click',()=>{
     if(z.layer instanceof L.Circle)geo={type:'circle',center:z.layer.getLatLng(),radius:z.layer.getRadius()};
     else if(z.layer instanceof L.Rectangle)geo={type:'rect',bounds:z.layer.getBounds()};
     else geo={type:'poly',latlngs:z.layer.getLatLngs()};
-    return{id:z.id,lbl:z.lbl,type:z.type,geo};
+    return{id:z.id,lbl:z.lbl,type:z.type,isMiss:!!z.layer._isMiss,isInverted:!!z.layer._isInverted,geo};
   });
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
@@ -808,9 +805,12 @@ document.getElementById('file-in').addEventListener('change',async e=>{
   st.zones.forEach(z=>map.removeLayer(z.layer));st.zones=[];
   data.forEach(d=>{
     const s=sty(d.type);let layer;
-    if(d.geo.type==='circle')layer=L.circle(d.geo.center,{radius:d.geo.radius,...s});
-    else if(d.geo.type==='rect')layer=L.rectangle([[d.geo.bounds._southWest.lat,d.geo.bounds._southWest.lng],[d.geo.bounds._northEast.lat,d.geo.bounds._northEast.lng]],s);
-    else layer=L.polygon(d.geo.latlngs,s);
+    const loadStyle = {color:'#f85149',weight:2,opacity:0.8,fillColor:'#f85149',fillOpacity:0.3};
+    if(d.geo.type==='circle')layer=L.circle(d.geo.center,{radius:d.geo.radius,...loadStyle});
+    else if(d.geo.type==='rect')layer=L.rectangle([[d.geo.bounds._southWest.lat,d.geo.bounds._southWest.lng],[d.geo.bounds._northEast.lat,d.geo.bounds._northEast.lng]],loadStyle);
+    else layer=L.polygon(d.geo.latlngs,loadStyle);
+    if(d.isMiss) layer._isMiss=true;
+    if(d.isInverted) layer._isInverted=true;
     layer.addTo(map);
     layer.on('click',ev=>{L.DomEvent.stopPropagation(ev);if(st.mode==='sel')selZone(d.id);});
     st.zones.push({id:d.id,lbl:d.lbl,type:d.type,layer});
@@ -1289,7 +1289,6 @@ function toMeters(val) {
 document.getElementById('btn-units').addEventListener('click', () => {
   useImperial = !useImperial;
   document.getElementById('btn-units').textContent = useImperial ? 'mi' : 'km';
-  document.getElementById('radius-unit-label').textContent = unitLabel();
   tip('Units: ' + (useImperial ? 'Imperial (miles)' : 'Metric (km)'));
 });
 
