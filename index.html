@@ -520,10 +520,17 @@ let displayLayer = null;
 
 function rebuildDisplay() {
   if (displayLayer) { map.removeLayer(displayLayer); displayLayer = null; }
-  if (st.zones.length === 0) return;
+  // Remove old inverted display layers
+  st.zones.filter(z => z.layer._isInverted).forEach(z => {
+    if (z._invertedDisplay) { map.removeLayer(z._invertedDisplay); z._invertedDisplay = null; }
+    z.layer.addTo(map); // show directly
+  });
+
+  const normalZones = st.zones.filter(z => !z.layer._isInverted);
+  if (normalZones.length === 0) return;
 
   let union = null;
-  for (const zone of st.zones) {
+  for (const zone of normalZones) {
     const t = layerToTurf(zone.layer);
     if (!t) continue;
     try { union = union ? turf.union(union, t) : t; } catch(e) {}
@@ -692,18 +699,21 @@ map.on('click',async(e)=>{
   if(st.mode!=='circ')return;
   // Bereits durch mode-switch open, ignorieren
 });
-// Inverted circle: world rectangle minus inner circle = everything OUTSIDE
+// Inverted circle: world minus circle = everything OUTSIDE
 function invertedCircleLayer(lat, lng, radiusM, style) {
   const steps = 64;
   const radiusKm = radiusM / 1000;
   const innerCircle = turf.circle([lng, lat], radiusKm, {steps, units:'kilometers'});
-  // Large bounding box covering the world
-  const world = turf.bboxPolygon([-180, -85, 180, 85]);
+  const world = turf.polygon([[[-180,-85],[180,-85],[180,85],[-180,85],[-180,-85]]]);
   const inverted = turf.difference(world, innerCircle);
-  if (!inverted) return L.circle([lat, lng], {radius: radiusM, ...style}); // fallback
-  const coords = inverted.geometry.coordinates;
-  const lls = coords.map(ring => ring.map(c => L.latLng(c[1], c[0])));
-  return L.polygon(lls, style);
+  if (!inverted) return L.circle([lat, lng], {radius: radiusM, ...style});
+  // Polygon with hole: [[outer ring], [inner ring (hole)]]
+  const rings = inverted.geometry.coordinates.map(ring =>
+    ring.map(c => L.latLng(c[1], c[0]))
+  );
+  const layer = L.polygon(rings, style);
+  layer._isInverted = true; // mark so rebuildDisplay skips union
+  return layer;
 }
 
 async function drawRadar(hit) {
