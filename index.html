@@ -57,7 +57,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 .empty{text-align:center;padding:28px 12px;color:var(--text3);font-size:11px;line-height:2}
 
 /* ── SEARCH ── */
-#search-wrap{position:absolute;top:12px;right:12px;z-index:9100;display:flex;flex-direction:column;gap:4px;width:260px}
+#search-wrap{position:absolute;top:64px;right:12px;z-index:9100;display:flex;flex-direction:column;gap:4px;width:260px}
 #search-toggle{display:none;width:38px;height:38px;border-radius:50%;background:var(--bg1);border:1px solid var(--border2);color:var(--text1);font-size:16px;cursor:pointer;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;box-shadow:0 2px 12px rgba(0,0,0,.4)}
 #search-bar{display:flex;flex-direction:column;gap:4px}
 #search-input{width:100%;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);color:var(--text1);font-size:13px;padding:9px 12px 9px 34px;outline:none;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:border-color .15s}
@@ -132,6 +132,9 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 #meas-sheet{display:none;position:fixed;bottom:80px;left:12px;z-index:8000;width:210px;pointer-events:all}
 #meas-sheet > div{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r14);padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.55)}
 
+.units-ctrl{display:block;width:30px;height:30px;line-height:30px;text-align:center;font-size:11px;font-weight:600;background:var(--bg1) !important;color:var(--text1) !important;border:none !important;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;font-family:inherit}
+.units-ctrl:hover{background:var(--bg3) !important}
+
 /* Leaflet */
 .leaflet-control-zoom{border:1px solid var(--border2) !important;border-radius:var(--r10) !important;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.4) !important}
 .leaflet-control-zoom a{background:var(--bg1) !important;color:var(--text1) !important;border-color:var(--border) !important}
@@ -143,8 +146,39 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
   #app{flex-direction:column}
   #main{order:1;flex:1}
   #statusbar{order:2;font-size:9px}
-  #toolbar{
+
+  /* Search bar as fixed bottom strip above toolbar */
+  #search-wrap{
     order:3;
+    position:relative;
+    top:auto;right:auto;
+    width:100%;
+    background:var(--bg1);
+    border-top:1px solid var(--border);
+    padding:8px 12px;
+    z-index:8500;
+    display:flex !important;
+    flex-direction:column;
+    gap:0;
+  }
+  #search-toggle{display:none !important}
+  #search-bar{
+    display:flex !important;
+    position:relative;
+    top:auto;right:auto;
+    width:100%;
+  }
+  #search-results{
+    position:absolute;
+    bottom:100%;
+    left:0;right:0;
+    margin-bottom:4px;
+    max-height:200px;
+    overflow-y:auto;
+  }
+
+  #toolbar{
+    order:4;
     border-top:1px solid var(--border);
     border-bottom:none;
     padding:6px 8px;
@@ -185,10 +219,6 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
   .tb-icon{font-size:22px}
   .tb-lbl{font-size:9px;color:inherit}
   #sidebar{display:none}
-  #search-wrap{top:12px;right:12px;width:auto}
-  #search-toggle{display:flex}
-  #search-bar{display:none;position:absolute;top:50px;right:0;width:min(290px,calc(100vw - 24px))}
-  #search-bar.open{display:flex}
   #tip{top:12px}
   .leaflet-control-zoom{margin-bottom:0 !important}
   #meas-sheet{bottom:100px}
@@ -215,7 +245,6 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     <button class="tb-btn" id="btn-opnv"><span class="tb-icon">🚌</span><span class="tb-lbl">Transit</span></button>
     <button class="tb-btn" id="btn-locate" title="Center on my location"><span class="tb-icon">⊕</span><span class="tb-lbl">Locate</span></button>
     <div class="spacer"></div>
-    <button class="tb-btn" id="btn-units" title="Toggle units">km</button>
     <button class="tb-btn" id="btn-zones"><span class="tb-icon">📋</span><span class="tb-lbl">Zones</span></button>
     <button class="tb-btn" id="btn-save"><span class="tb-icon">💾</span><span class="tb-lbl">Save</span></button>
     <button class="tb-btn" id="btn-load"><span class="tb-icon">📂</span><span class="tb-lbl">Load</span></button>
@@ -225,21 +254,21 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
   <div id="main">
     <div id="map">
       <div id="tip"></div>
-      <div id="search-wrap">
-        <button id="search-toggle">🔍</button>
-        <div id="search-bar">
-          <div style="position:relative">
-            <span id="search-icon">🔍</span>
-            <input type="text" id="search-input" placeholder="Search location…" autocomplete="off">
-          </div>
-          <div id="search-results"></div>
-        </div>
-      </div>
       <div id="radius-popup" style="display:none"></div>
     </div>
     <div id="sidebar">
       <div id="sidebar-title">ZONES (<span id="zone-count">0</span>)</div>
       <div id="zone-list"><div class="empty">No zones yet.<br>Draw on the map.</div></div>
+    </div>
+  </div>
+  <div id="search-wrap">
+    <button id="search-toggle">🔍</button>
+    <div id="search-bar">
+      <div style="position:relative">
+        <span id="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Search location…" autocomplete="off">
+      </div>
+      <div id="search-results"></div>
     </div>
   </div>
   <div id="statusbar">
@@ -422,6 +451,25 @@ const st={mode:'none',type:'hider',zones:[],selId:null,drawing:false,startLL:nul
 
 const map=L.map('map',{center:[51.1,10.4],zoom:6,zoomControl:false,tap:true,tapTolerance:15});
 L.control.zoom({position:'topleft'}).addTo(map);
+
+// Units toggle as Leaflet control
+const UnitsControl = L.Control.extend({
+  options: {position:'topleft'},
+  onAdd: function() {
+    const btn = L.DomUtil.create('button','leaflet-bar leaflet-control units-ctrl');
+    btn.id = 'btn-units';
+    btn.textContent = 'km';
+    btn.title = 'Toggle units';
+    L.DomEvent.disableClickPropagation(btn);
+    L.DomEvent.on(btn, 'click', function() {
+      useImperial = !useImperial;
+      btn.textContent = useImperial ? 'mi' : 'km';
+      tip('Units: ' + (useImperial ? 'Imperial (miles)' : 'Metric (km)'));
+    });
+    return btn;
+  }
+});
+new UnitsControl().addTo(map);
 // Multiple tile providers with automatic fallback
 const tileProviders = [
   {
@@ -1338,12 +1386,6 @@ function unitLabel() { return useImperial ? 'mi' : 'km'; }
 function toMeters(val) {
   return useImperial ? val * 1609.344 : val * 1000;
 }
-
-document.getElementById('btn-units').addEventListener('click', () => {
-  useImperial = !useImperial;
-  document.getElementById('btn-units').textContent = useImperial ? 'mi' : 'km';
-  tip('Units: ' + (useImperial ? 'Imperial (miles)' : 'Metric (km)'));
-});
 
 document.getElementById('btn-locate').addEventListener('click', () => {
   if (locationMarker) {
