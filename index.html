@@ -1337,6 +1337,16 @@ async function measDraw(closer) {
   const km = (meas.radius / 1000).toFixed(1);
   const label = (closer ? "✓ Hit" : "✗ Miss") + ' — ' + meas.refName + ' (' + km + ' km)';
   const refLat = meas.refLat, refLng = meas.refLng, radius = meas.radius;
+
+  // Close immediately on tap
+  document.getElementById('meas-sheet').style.display='none';
+  document.getElementById('btn-measuring').classList.remove('active');
+  document.getElementById('meas-selected').style.display = 'none';
+  document.getElementById('btn-meas-green').style.opacity = '0.4';
+  document.getElementById('btn-meas-red').style.opacity = '0.4';
+  meas.refLat = null; meas.refLng = null; meas.refName = null; meas.radius = null;
+  if (meas.refMarker) { map.removeLayer(meas.refMarker); meas.refMarker = null; }
+
   if (closer) {
     await addZone(s => invertedCircleLayer(refLat, refLng, radius, s), label);
   } else {
@@ -1347,20 +1357,6 @@ async function measDraw(closer) {
     }, label);
   }
   map.fitBounds(L.circle([refLat, refLng], {radius}).getBounds(), {padding: [40, 40]});
-  // Log
-  const color = closer ? '#3fb950' : '#f85149';
-  const logEl = document.getElementById('meas-log');
-  logEl.style.display = 'block';
-  logEl.innerHTML += '<div style="font-size:12px;color:' + color + ';padding:3px 0">' + label + '</div>';
-  // Reset for next round
-  meas.refLat = null; meas.refLng = null; meas.refName = null; meas.radius = null;
-  if (meas.refMarker) { map.removeLayer(meas.refMarker); meas.refMarker = null; }
-  document.getElementById('btn-meas-green').style.opacity = '0.4';
-  document.getElementById('btn-meas-red').style.opacity = '0.4';
-  // Close sheet
-  document.getElementById('meas-sheet').style.display='none';
-  document.getElementById('btn-measuring').classList.remove('active');
-  document.getElementById('meas-selected').style.display = 'none';
 }
 
 document.getElementById('btn-measuring').addEventListener('click', () => {
