@@ -156,7 +156,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     background:var(--bg1);
     border-top:1px solid var(--border);
     padding:8px 12px;
-    z-index:8500;
+    z-index:7500;
     display:flex !important;
     flex-direction:column;
     gap:0;
@@ -649,9 +649,14 @@ function bindLayerEvents(layer, id) {
   });
 }
 
-async function addZone(mkLayer, def) {
-  const lbl = await askLabel(def);
-  if (!lbl) return;
+async function addZone(mkLayer, def, askName=false) {
+  let lbl;
+  if (askName) {
+    lbl = await askLabel(def);
+    if (!lbl) return;
+  } else {
+    lbl = def || 'Zone';
+  }
 
   const id = genId();
   const testLayer = mkLayer({});
@@ -798,7 +803,7 @@ map.on('mouseup',async(e)=>{
     if(st.freeLayer){map.removeLayer(st.freeLayer);st.freeLayer=null;}
     const pts=convexHull(st.freePoints);st.freePoints=[];
     if(pts.length<3)return;
-    await addZone(s=>{const l=L.polygon(pts,{...s,color:'#f85149',fillColor:'#f85149'});l._isMiss=true;return l;},'Draw zone');
+    await addZone(s=>{const l=L.polygon(pts,{...s,color:'#f85149',fillColor:'#f85149'});l._isMiss=true;return l;},'Draw zone',true);
   }
 });
 
@@ -897,7 +902,7 @@ mc.addEventListener('touchend',async e=>{
     if(st.freeLayer){map.removeLayer(st.freeLayer);st.freeLayer=null;}
     const pts=convexHull(st.freePoints);st.freePoints=[];
     if(pts.length<3)return;
-    await addZone(s=>{const l=L.polygon(pts,{...s,color:'#f85149',fillColor:'#f85149'});l._isMiss=true;return l;},'Draw zone');
+    await addZone(s=>{const l=L.polygon(pts,{...s,color:'#f85149',fillColor:'#f85149'});l._isMiss=true;return l;},'Draw zone',true);
   }
 },{passive:false});
 
