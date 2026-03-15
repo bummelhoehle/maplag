@@ -148,36 +148,6 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
   #main{order:1;flex:1}
   #statusbar{order:2;font-size:9px}
 
-  /* Search bar as fixed bottom strip above toolbar */
-  #search-wrap{
-    order:3;
-    position:relative;
-    top:auto;right:auto;
-    width:100%;
-    background:var(--bg1);
-    border-top:1px solid var(--border);
-    padding:8px 12px;
-    z-index:7500;
-    display:flex !important;
-    flex-direction:column;
-    gap:0;
-  }
-  #search-toggle{display:none !important}
-  #search-bar{
-    display:flex !important;
-    position:relative;
-    top:auto;right:auto;
-    width:100%;
-  }
-  #search-results{
-    position:absolute;
-    bottom:100%;
-    left:0;right:0;
-    margin-bottom:4px;
-    max-height:200px;
-    overflow-y:auto;
-  }
-
   #toolbar{
     order:4;
     border-top:1px solid var(--border);
@@ -189,6 +159,33 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     display:grid;
     grid-template-columns:repeat(5,1fr);
     gap:4px;
+  }
+  /* Search spans full top row of the toolbar grid */
+  #search-wrap{
+    grid-column:1/-1;
+    grid-row:1;
+    position:relative;
+    width:auto;
+    border-bottom:1px solid var(--border);
+    padding:4px 0 6px;
+    z-index:7500;
+    display:flex !important;
+    flex-direction:column;
+    gap:0;
+  }
+  #search-toggle{display:none !important}
+  #search-bar{
+    display:flex !important;
+    position:relative;
+    width:100%;
+  }
+  #search-results{
+    position:absolute;
+    bottom:100%;
+    left:0;right:0;
+    margin-bottom:4px;
+    max-height:200px;
+    overflow-y:auto;
   }
   .logo{display:none}
   .sep{display:none}
@@ -222,7 +219,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
   #sidebar{display:none}
   #tip{top:12px}
   .leaflet-control-zoom{margin-bottom:0 !important}
-  #meas-sheet{bottom:130px}
+  #meas-sheet{bottom:160px}
   .sheet-box{max-height:88vh}
 }
 @media(min-width:701px){
