@@ -81,7 +81,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 #radius-popup{display:none}
 
 /* ── MODALS ── */
-#label-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+#label-modal{display:none;position:fixed;inset:0;background:none;z-index:9999;align-items:center;justify-content:center}
 #label-modal.show{display:flex}
 #label-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r14);padding:22px;width:min(320px,92vw);box-shadow:0 16px 48px rgba(0,0,0,.6)}
 #label-box h3{font-size:12px;font-weight:500;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
@@ -91,7 +91,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 .confirm-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r14);padding:20px;width:min(300px,90vw);box-shadow:0 16px 48px rgba(0,0,0,.6)}
 
 /* ── BOTTOM SHEETS ── */
-.bottom-sheet{display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);align-items:flex-end;justify-content:center;touch-action:none;backdrop-filter:blur(2px)}
+.bottom-sheet{display:none;position:fixed;inset:0;z-index:9000;background:none;align-items:flex-end;justify-content:center;touch-action:none}
 .bottom-sheet.open{display:flex}
 .sheet-box{background:var(--bg2);border-radius:var(--r20) var(--r20) 0 0;width:100%;max-width:540px;max-height:82vh;display:flex;flex-direction:column;padding-bottom:max(14px,env(safe-area-inset-bottom));overflow:hidden;touch-action:pan-y;pointer-events:all;border:1px solid var(--border2);border-bottom:none}
 .sheet-handle{width:36px;height:3px;background:var(--border2);border-radius:2px;margin:12px auto 8px}
@@ -1248,7 +1248,7 @@ function tpDrawBisector(startPos, stopPos, warmer) {
   const dLng = (stopPos.lng - startPos.lng) * cosLat;
   const len = Math.sqrt(dLat*dLat + dLng*dLng);
 
-  // Perpendicular rotated 90°, same length as A→B
+  // Perpendicular rotated 90°
   const half = len / 2;
   const perpLat = (-dLng / len) * half;
   const perpLng = ( dLat / len) * half / cosLat;
@@ -1267,7 +1267,7 @@ function tpDrawBisector(startPos, stopPos, warmer) {
   const eLat =  elimPos.lat - midLat;
   const eLng = (elimPos.lng - midLng) * cosLat;
   const eLen = Math.sqrt(eLat*eLat + eLng*eLng);
-  const elimScale = 40;
+  const elimScale = 1080;
   const edLat = (eLat / eLen) * elimScale;
   const edLng = (eLng / eLen) * elimScale / cosLat;
 
