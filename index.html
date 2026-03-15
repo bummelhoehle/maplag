@@ -1219,7 +1219,13 @@ function measDraw(closer) {
   document.getElementById('btn-meas-red').style.opacity = '0.4';
 }
 
-document.getElementById('btn-measuring').addEventListener('click', measOpen);
+document.getElementById('btn-measuring').addEventListener('click', () => {
+  const box = document.getElementById('meas-box');
+  if (box.style.display === 'none') { measOpen(); } else {
+    box.style.display = 'none';
+    document.getElementById('btn-measuring').classList.remove('active');
+  }
+});
 document.getElementById('btn-meas-close').addEventListener('click', () => {
   document.getElementById('meas-box').style.display = 'none';
   document.getElementById('btn-measuring').classList.remove('active');
