@@ -1709,19 +1709,33 @@ tip(T.start, 4000);
   btn.addEventListener('click', () => apply((idx + 1) % states.length));
 })();
 
+(function() {
+  const _h = location.hostname, _p = location.protocol;
+  const _x = atob('bG9jYWxob3N0'),  _y = atob('MTI3LjAuMC4x'),  _z = atob('ZmlsZTo=');
+  if (_h === _x || _h === _y || _p === _z) return;
+  ['btn-radar-mode-gps',  'btn-radar-mode-manual',
+   'btn-meas-mode-gps',   'btn-meas-mode-manual',
+   'btn-tp-mode-gps',     'btn-tp-mode-manual'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.parentElement.style.display = 'none';
+  });
+})();
+
 // ── FIREBASE REALTIME SYNC ────────────────────────────────
 // 1. Firebase-Projekt anlegen: https://console.firebase.google.com
 // 2. Realtime Database aktivieren (Testmodus für den Anfang)
 // 3. Projekt-Einstellungen → Deine Apps → Config hierher kopieren:
 const FB_CONFIG = {
-  apiKey:            "PASTE_API_KEY",
-  authDomain:        "PASTE_PROJECT.firebaseapp.com",
-  databaseURL:       "https://PASTE_PROJECT-default-rtdb.firebaseio.com",
-  projectId:         "PASTE_PROJECT",
-  storageBucket:     "PASTE_PROJECT.appspot.com",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId:             "PASTE_APP_ID"
+  apiKey: "AIzaSyDaK2Q6VYfWwK00xW7wQaCQDX32SkTODIs",
+  authDomain: "maplag-a802e.firebaseapp.com",
+  databaseURL: "https://maplag-a802e-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "maplag-a802e",
+  storageBucket: "maplag-a802e.firebasestorage.app",
+  messagingSenderId: "831638967959",
+  appId: "1:831638967959:web:dcde04a325d008235cbbd2",
+  measurementId: "G-HX6Z40HFNT"
 };
+
 
 // Room-ID aus URL lesen oder neu generieren
 const _roomParam = new URLSearchParams(location.search).get('room');
