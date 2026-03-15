@@ -129,7 +129,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 .tb-lbl{font-size:11px;display:block}
 
 /* Measuring float panel */
-#meas-sheet{display:none;position:fixed;bottom:80px;left:12px;z-index:8000;width:210px;pointer-events:all}
+#meas-sheet{display:none;position:fixed;bottom:80px;left:0;right:0;z-index:8000;pointer-events:all}
 #meas-sheet > div{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r14);padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.55)}
 
 .units-ctrl{display:block;width:30px;height:30px;line-height:30px;text-align:center;font-size:11px;font-weight:600;background:var(--bg1) !important;color:var(--text1) !important;border:none !important;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;font-family:inherit}
@@ -289,7 +289,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 </div>
 
 <!-- MEASURING SHEET -->
-<div id="meas-sheet" style="display:none;position:fixed;bottom:80px;left:12px;z-index:8000;width:260px;pointer-events:all">
+<div id="meas-sheet" style="display:none;position:fixed;bottom:80px;left:0;right:0;z-index:8000;pointer-events:all">
   <div style="background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px;box-shadow:0 8px 32px rgba(0,0,0,.6)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <span style="font-size:12px;font-weight:600;color:var(--text1)">📏 Measuring</span>
