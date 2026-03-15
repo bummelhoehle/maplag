@@ -521,19 +521,12 @@ let displayLayer = null;
 function rebuildDisplay() {
   if (displayLayer) { map.removeLayer(displayLayer); displayLayer = null; }
 
-  // Handle inverted zones separately — render with visible style
-  st.zones.filter(z => z.layer._isInverted).forEach(z => {
-    if (!map.hasLayer(z.layer)) {
-      z.layer.setStyle({
-        color: '#3fb950', weight: 2, opacity: 0.8,
-        fillColor: '#3fb950', fillOpacity: 0.3
-      });
-      z.layer.addTo(map);
-    }
+  // Handle inverted (Hit) and Miss zones separately
+  st.zones.filter(z => z.layer._isInverted || z.layer._isMiss).forEach(z => {
+    if (!map.hasLayer(z.layer)) z.layer.addTo(map);
   });
 
-  // Normal zones → union display
-  const normalZones = st.zones.filter(z => !z.layer._isInverted);
+  const normalZones = st.zones.filter(z => !z.layer._isInverted && !z.layer._isMiss);
   if (normalZones.length === 0) return;
 
   let union = null;
@@ -564,17 +557,17 @@ async function addZone(mkLayer, def) {
   if (!lbl) return;
 
   const id = genId();
-  // Inverted layers get their own style; normal zones stored invisible for union display
   const testLayer = mkLayer({});
   const isInverted = testLayer._isInverted;
+  const isMiss = testLayer._isMiss;
   map.removeLayer(testLayer);
 
   let layer;
   if (isInverted) {
-    layer = mkLayer({
-      color: '#3fb950', weight: 2, opacity: 0.8,
-      fillColor: '#3fb950', fillOpacity: 0.3
-    });
+    layer = mkLayer({ color:'#3fb950', weight:2, opacity:0.8, fillColor:'#3fb950', fillOpacity:0.3 });
+  } else if (isMiss) {
+    layer = mkLayer({ color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3 });
+    layer._isMiss = true;
   } else {
     layer = mkLayer({ color:'transparent', weight:0, fillColor:'transparent', fillOpacity:0 });
   }
@@ -747,12 +740,13 @@ async function drawRadar(hit) {
   const radiusM = toMeters(km);
   const label = `${hit?'✓ Hit':'✗ Miss'} Radar ${km} ${unitLabel()}`;
   if (hit) {
-    // Hit = outside the circle
     await addZone(s => invertedCircleLayer(ll.lat, ll.lng, radiusM, s), label);
   } else {
-    // Miss = inside the circle
-    const color = '#f85149';
-    await addZone(s => L.circle([ll.lat,ll.lng],{radius:radiusM,...s,color,fillColor:color}), label);
+    await addZone(s => {
+      const l = L.circle([ll.lat,ll.lng],{radius:radiusM,...s,color:'#f85149',fillColor:'#f85149'});
+      l._isMiss = true;
+      return l;
+    }, label);
   }
   map.setView(ll, 12);
 }
@@ -1240,12 +1234,13 @@ async function measDraw(closer) {
   const label = (closer ? "✓ Hit" : "✗ Miss") + ' — ' + meas.refName + ' (' + km + ' km)';
   const refLat = meas.refLat, refLng = meas.refLng, radius = meas.radius;
   if (closer) {
-    // Hit = outside the circle
     await addZone(s => invertedCircleLayer(refLat, refLng, radius, s), label);
   } else {
-    // Miss = inside the circle
-    const color = '#f85149';
-    await addZone(s => L.circle([refLat, refLng], {radius, ...s, color, fillColor: color}), label);
+    await addZone(s => {
+      const l = L.circle([refLat, refLng], {radius, ...s, color:'#f85149', fillColor:'#f85149'});
+      l._isMiss = true;
+      return l;
+    }, label);
   }
   map.fitBounds(L.circle([refLat, refLng], {radius}).getBounds(), {padding: [40, 40]});
   // Log
