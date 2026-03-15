@@ -15,6 +15,14 @@
   --gold:#e8b84b;
   --r6:6px;--r10:10px;--r14:14px;--r20:20px;
 }
+.light{
+  --bg:#f0f4f8;--bg1:#ffffff;--bg2:#e8edf3;--bg3:#dde4ed;
+  --border:#c8d3de;--border2:#b0bfcc;
+  --text1:#1a2533;--text2:#4a6280;--text3:#8099b0;
+  --red:#d03030;--red-bg:rgba(208,48,48,.1);
+  --green:#1f9e50;--green-bg:rgba(31,158,80,.1);
+  --gold:#c07800;
+}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;-webkit-font-smoothing:antialiased}
 body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif}
@@ -24,7 +32,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 #map{flex:1;position:relative;z-index:0}
 
 /* ── TOOLBAR ── */
-#toolbar{display:flex;align-items:center;gap:4px;padding:0 12px;height:52px;background:var(--bg1);border-bottom:1px solid var(--border);flex-shrink:0;scrollbar-width:none}
+#toolbar{display:flex;align-items:center;gap:4px;padding:0 12px;height:52px;background:var(--bg1);border-top:1px solid var(--border);border-bottom:none;flex-shrink:0;scrollbar-width:none;order:3}
 #toolbar::-webkit-scrollbar{display:none}
 .logo{font-size:15px;font-weight:700;color:var(--gold);letter-spacing:2px;white-space:nowrap;margin-right:8px;flex-shrink:0}
 .sep{width:1px;height:18px;background:var(--border2);flex-shrink:0;margin:0 4px}
@@ -38,7 +46,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 .spacer{flex:1;min-width:4px}
 
 /* ── STATUSBAR ── */
-#statusbar{padding:0 14px;height:24px;background:var(--bg1);border-top:1px solid var(--border);font-size:10px;color:var(--text3);display:flex;align-items:center;gap:16px;flex-shrink:0;letter-spacing:.3px}
+#statusbar{display:none}
 #statusbar span{color:var(--text2)}
 
 #zone-list::-webkit-scrollbar{width:2px}
@@ -244,6 +252,8 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     <button class="tb-btn" id="btn-load"><span class="tb-icon">📂</span><span class="tb-lbl">Load</span></button>
     <input type="file" id="file-in" accept=".json" style="display:none">
     <button class="tb-btn danger" id="btn-clear"><span class="tb-icon">🗑</span><span class="tb-lbl">Clear</span></button>
+    <div class="sep"></div>
+    <button class="tb-btn" id="btn-theme"><span class="tb-icon">☀</span><span class="tb-lbl">Light</span></button>
   </div>
   <div id="main">
     <div id="map">
@@ -454,11 +464,7 @@ new UnitsControl().addTo(map);
 
 // Transit control added after toggleOpnv is defined (see below)
 // Multiple tile providers with automatic fallback
-const tileProviders = [
-  {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    opts: { attribution: '&copy; OpenStreetMap', subdomains: 'abc', maxZoom: 19 }
-  },
+const tileProvidersDark = [
   {
     url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
     opts: { attribution: '&copy; Stadia Maps &copy; OpenStreetMap', maxZoom: 20 }
@@ -466,16 +472,54 @@ const tileProviders = [
   {
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     opts: { attribution: '&copy; CARTO &copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20 }
+  },
+  {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    opts: { attribution: '&copy; OpenStreetMap', subdomains: 'abc', maxZoom: 19 }
   }
 ];
+const tileProvidersLight = [
+  {
+    url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
+    opts: { attribution: '&copy; Stadia Maps &copy; OpenStreetMap', maxZoom: 20 }
+  },
+  {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    opts: { attribution: '&copy; CARTO &copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20 }
+  },
+  {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    opts: { attribution: '&copy; OpenStreetMap', subdomains: 'abc', maxZoom: 19 }
+  }
+];
+const tileProvidersDefault = [
+  {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    opts: { attribution: '&copy; OpenStreetMap', subdomains: 'abc', maxZoom: 19 }
+  }
+];
+// Language-specific tile overrides (prepended when lang is set)
+const tileProvidersLang = {
+  de: [{ url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png', opts: { attribution: '&copy; OpenStreetMap DE', maxZoom: 19 } }],
+  en: [{ url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', opts: { attribution: '&copy; CARTO &copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20 } }],
+};
+
+let tileProviders = tileProvidersDefault;
+let mapLang = localStorage.getItem('mapLang') || 'de';
 
 let tileIndex = 0;
 let currentTile = null;
 
+function getActiveTileProviders() {
+  const langTiles = tileProvidersLang[mapLang] || [];
+  return [...langTiles, ...tileProviders];
+}
+
 function loadTiles(idx) {
-  if (idx >= tileProviders.length) return;
+  const providers = getActiveTileProviders();
+  if (idx >= providers.length) return;
   if (currentTile) map.removeLayer(currentTile);
-  const p = tileProviders[idx];
+  const p = providers[idx];
   currentTile = L.tileLayer(p.url, p.opts).addTo(map);
   let errorCount = 0;
   currentTile.on('tileerror', function() {
@@ -529,6 +573,54 @@ const TransitControl = L.Control.extend({
   }
 });
 new TransitControl().addTo(map);
+
+const MapThemeControl = L.Control.extend({
+  options: {position:'topleft'},
+  onAdd: function() {
+    const btn = L.DomUtil.create('button','leaflet-bar leaflet-control units-ctrl');
+    btn.id = 'btn-map-theme';
+    btn.textContent = '🗺';
+    btn.title = 'Toggle map style';
+    L.DomEvent.disableClickPropagation(btn);
+    return btn;
+  }
+});
+new MapThemeControl().addTo(map);
+
+// ── KARTEN-SPRACHE ────────────────────────────────────────
+const mapLangs = [
+  { code: 'local', label: '🌐', title: 'Local names' },
+  { code: 'de',    label: 'DE', title: 'Deutsch' },
+  { code: 'en',    label: 'EN', title: 'English' },
+  { code: 'fr',    label: 'FR', title: 'Français' },
+  { code: 'es',    label: 'ES', title: 'Español' },
+];
+let mapLangIdx = mapLangs.findIndex(l => l.code === mapLang);
+if (mapLangIdx < 0) mapLangIdx = 1;
+
+const LangControl = L.Control.extend({
+  options: {position:'topleft'},
+  onAdd: function() {
+    const btn = L.DomUtil.create('button','leaflet-bar leaflet-control units-ctrl');
+    btn.id = 'btn-lang';
+    btn.style.fontSize = '10px';
+    btn.style.fontWeight = '700';
+    btn.textContent = mapLangs[mapLangIdx].label;
+    btn.title = 'Map language';
+    L.DomEvent.disableClickPropagation(btn);
+    L.DomEvent.on(btn, 'click', () => {
+      mapLangIdx = (mapLangIdx + 1) % mapLangs.length;
+      mapLang = mapLangs[mapLangIdx].code;
+      btn.textContent = mapLangs[mapLangIdx].label;
+      btn.title = mapLangs[mapLangIdx].title;
+      localStorage.setItem('mapLang', mapLang);
+      tileIndex = 0;
+      loadTiles(0);
+    });
+    return btn;
+  }
+});
+new LangControl().addTo(map);
 
 // ── STANDORT (automatisch aktiv) ─────────────────────────
 let locationMarker = null;
@@ -1009,7 +1101,7 @@ async function doSearch(q) {
   positionSearchResults();
   searchResults.style.display = 'block';
   try {
-    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=de`;
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=${mapLang === 'local' ? 'en' : mapLang}`;
     const res = await fetch(url);
     const data = await res.json();
     const features = data.features || [];
@@ -1391,7 +1483,7 @@ setInterval(() => {
     if (q.length < 2) { res.style.display = 'none'; return; }
     timer = setTimeout(async () => {
       try {
-        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=de`);
+        const r = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=${mapLang === 'local' ? 'en' : mapLang}`);
         const data = await r.json();
         const features = data.features || [];
         const posMeasRes = () => {
@@ -1452,6 +1544,45 @@ setTimeout(()=>map.invalidateSize(),300);
 setTimeout(()=>map.invalidateSize(),800);
 window.addEventListener('resize',()=>map.invalidateSize());
 tip(T.start, 4000);
+
+// ── THEME TOGGLE ──────────────────────────────────────────
+(function(){
+  const btn = document.getElementById('btn-theme');
+  const apply = light => {
+    document.documentElement.classList.toggle('light', light);
+    btn.querySelector('.tb-icon').textContent = light ? '🌙' : '☀';
+    btn.querySelector('.tb-lbl').textContent  = light ? 'Dark' : 'Light';
+    localStorage.setItem('theme', light ? 'light' : 'dark');
+  };
+  apply(localStorage.getItem('theme') === 'light');
+  btn.addEventListener('click', () => apply(!document.documentElement.classList.contains('light')));
+})();
+
+// ── MAP TILE THEME ────────────────────────────────────────
+(function(){
+  const btn = document.getElementById('btn-map-theme');
+  const states = [
+    { key: 'default', providers: tileProvidersDefault, icon: '🗺',  lbl: 'Map' },
+    { key: 'light',   providers: tileProvidersLight,   icon: '🌕', lbl: 'Light map' },
+    { key: 'dark',    providers: tileProvidersDark,    icon: '🌑', lbl: 'Dark map' },
+  ];
+  const saved = localStorage.getItem('mapTheme') || 'default';
+  let idx = states.findIndex(s => s.key === saved);
+  if (idx < 0) idx = 0;
+  const apply = i => {
+    idx = i;
+    const s = states[idx];
+    tileProviders = s.providers;
+    tileIndex = 0;
+    loadTiles(0);
+    btn.textContent = s.icon;
+    btn.title = s.lbl;
+    localStorage.setItem('mapTheme', s.key);
+  };
+  apply(idx);
+  btn.addEventListener('click', () => apply((idx + 1) % states.length));
+})();
+
 }); // end window.addEventListener('load')
 </script>
 </body>
