@@ -91,9 +91,9 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 .confirm-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r14);padding:20px;width:min(300px,90vw);box-shadow:0 16px 48px rgba(0,0,0,.6)}
 
 /* ── BOTTOM SHEETS ── */
-.bottom-sheet{display:none;position:fixed;inset:0;z-index:9000;background:none;align-items:flex-end;justify-content:center;touch-action:none}
+.bottom-sheet{display:none;position:fixed;inset:0;bottom:var(--toolbar-h,52px);z-index:9000;background:none;align-items:flex-end;justify-content:center;touch-action:none}
 .bottom-sheet.open{display:flex}
-.sheet-box{background:var(--bg2);border-radius:var(--r20) var(--r20) 0 0;width:100%;max-width:540px;max-height:82vh;display:flex;flex-direction:column;padding-bottom:max(14px,env(safe-area-inset-bottom));overflow:hidden;touch-action:pan-y;pointer-events:all;border:1px solid var(--border2);border-bottom:none}
+.sheet-box{background:var(--bg2);border-radius:var(--r20);width:100%;max-width:540px;max-height:82vh;display:flex;flex-direction:column;padding-bottom:14px;overflow:hidden;touch-action:pan-y;pointer-events:all;border:1px solid var(--border2);margin-bottom:6px}
 .sheet-handle{width:36px;height:3px;background:var(--border2);border-radius:2px;margin:12px auto 8px}
 .sheet-header{display:flex;align-items:center;justify-content:space-between;padding:4px 18px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
 .sheet-header h3{font-size:14px;font-weight:600;color:var(--text1)}
@@ -216,7 +216,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 
   #tip{top:12px}
   .leaflet-control-zoom{margin-bottom:0 !important}
-  .sheet-box{max-height:88vh}
+  .sheet-box{max-height:calc(92vh - var(--toolbar-h,120px))}
 }
 @media(min-width:701px){
   #search-toggle{display:none !important}
@@ -822,7 +822,7 @@ function renderList(){ renderZonePanel(); }
 document.querySelectorAll('[data-mode]').forEach(b=>{
   b.addEventListener('click',()=>{
     const clicked = b.dataset.mode;
-    // Nochmal klicken → deaktivieren, Karte bewegen
+    // Nochmal klicken → deaktivieren + Sheet schließen
     if(st.mode === clicked) {
       cancelDraw();
       st.mode = 'none';
@@ -830,7 +830,6 @@ document.querySelectorAll('[data-mode]').forEach(b=>{
       map.dragging.enable();
       document.getElementById('radar-sheet').classList.remove('open');
       document.getElementById('st-mode').textContent='Pan';
-      tip('Pan mode — drawing disabled');
       return;
     }
     cancelDraw();
@@ -1124,7 +1123,9 @@ function renderZonePanel() {
     });
   });
 }
-document.getElementById('btn-zones').addEventListener('click', openZonePanel);
+document.getElementById('btn-zones').addEventListener('click', () => {
+  document.getElementById('zone-panel').classList.contains('open') ? closeZonePanel() : openZonePanel();
+});
 document.getElementById('zone-panel-close').addEventListener('click', closeZonePanel);
 document.getElementById('zone-panel').addEventListener('click', function(e) {
   if (e.target === this) closeZonePanel();
@@ -1909,6 +1910,13 @@ document.getElementById('btn-share').addEventListener('click', () => {
 window.addEventListener('beforeunload', () => {
   if (locationWatch) navigator.geolocation.clearWatch(locationWatch);
 });
+
+function _updateToolbarH() {
+  const h = document.getElementById('toolbar').offsetHeight;
+  document.documentElement.style.setProperty('--toolbar-h', h + 'px');
+}
+_updateToolbarH();
+window.addEventListener('resize', _updateToolbarH);
 
 }); // end window.addEventListener('load')
 </script>
