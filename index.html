@@ -1159,7 +1159,7 @@ function measSelectFromSearch(lat, lng, name) {
 }
 
 function measDraw(closer) {
-  if (!measState.refLat || !measState.dist) { tip('Erst Ort wählen'); return; }
+  if (!measState.refLat) { tip('Erst Ort über Suche wählen'); return; }
   const color = closer ? '#3fb950' : '#f85149';
   const circle = L.circle([measState.refLat, measState.refLng], {
     radius: measState.dist, color: color, weight: 2.5, opacity: 1,
@@ -1173,14 +1173,14 @@ function measDraw(closer) {
   logEl.style.display = 'block';
   logEl.innerHTML += '<div style="font-size:12px;color:' + color + ';padding:3px 0">'
     + (closer ? '✓ Näher' : '✗ Weiter') + ' — ' + name + ' (' + km + ' km)</div>';
-  // Reset für nächste Runde
-  measState.refLat = null; measState.dist = null;
+  // Reset für nächste Runde — NUR Zustand, keine disabled-Attribute
+  measState.refLat = null;
+  measState.refLng = null;
+  measState.dist = null;
   if (measState.refMarker) { map.removeLayer(measState.refMarker); measState.refMarker = null; }
   document.getElementById('meas-selected').style.display = 'none';
-  const g = document.getElementById('btn-meas-green');
-  const r = document.getElementById('btn-meas-red');
-  g.setAttribute('disabled',''); g.style.opacity = '0.4'; g.style.cursor = 'default';
-  r.setAttribute('disabled',''); r.style.opacity = '0.4'; r.style.cursor = 'default';
+  document.getElementById('btn-meas-green').style.opacity = '0.4';
+  document.getElementById('btn-meas-red').style.opacity = '0.4';
 }
 
 document.getElementById('btn-meas-green').addEventListener('click', () => measDraw(true));
