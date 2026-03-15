@@ -535,62 +535,8 @@ function bindLayerEvents(layer, id) {
 
 // Unsichtbarer Geometrie-Layer pro Zone (for Events/Selektion)
 // Ein sichtbarer Union-Display-Layer for alle Zonen zusammen
-let displayLayer = null;
-
 function rebuildDisplay() {
-  if (displayLayer) { map.removeLayer(displayLayer); displayLayer = null; }
-  // Clean up miss display layers
-  if (rebuildDisplay._missLayers) {
-    rebuildDisplay._missLayers.forEach(l => map.removeLayer(l));
-    rebuildDisplay._missLayers = [];
-  }
-
-  // Handle inverted (Hit) zones separately — they have holes, can't be unioned
-  st.zones.filter(z => z.layer._isInverted).forEach(z => {
-    if (!map.hasLayer(z.layer)) z.layer.addTo(map);
-  });
-
-  // Miss + normal zones → union display (red for miss, blue for normal)
-  const normalZones = st.zones.filter(z => !z.layer._isInverted);
-  if (normalZones.length === 0) return;
-
-  const missZones = normalZones.filter(z => z.layer._isMiss);
-  const blueZones = normalZones.filter(z => !z.layer._isMiss);
-
-  function buildUnionLayer(zones, style) {
-    if (zones.length === 0) return null;
-    let union = null;
-    for (const zone of zones) {
-      const t = layerToTurf(zone.layer);
-      if (!t) continue;
-      try { union = union ? turf.union(union, t) : t; } catch(e) {}
-    }
-    if (!union) return null;
-    let layer;
-    if (union.geometry.type === 'Polygon') {
-      const lls = union.geometry.coordinates[0].map(c => L.latLng(c[1], c[0]));
-      layer = L.polygon(lls, style).addTo(map);
-    } else if (union.geometry.type === 'MultiPolygon') {
-      const allLls = union.geometry.coordinates.map(poly => poly[0].map(c => L.latLng(c[1], c[0])));
-      layer = L.polygon(allLls, style).addTo(map);
-    }
-    if (layer) layer.on('mousedown mouseup mousemove touchstart touchmove touchend click', e => {
-      if (st.mode !== 'none') L.DomEvent.stopPropagation(e);
-    });
-    return layer;
-  }
-
-  const missStyle = {color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3};
-  const blueStyle = sty('hider');
-
-  displayLayer = buildUnionLayer(blueZones, blueStyle);
-  const missDisplay = buildUnionLayer(missZones, missStyle);
-  // Store miss display layer for cleanup
-  if (missDisplay) {
-    missDisplay._isMissDisplay = true;
-    if (!rebuildDisplay._missLayers) rebuildDisplay._missLayers = [];
-    rebuildDisplay._missLayers.push(missDisplay);
-  }
+  // Each zone is already on the map with its own style — nothing to do
 }
 
 async function addZone(mkLayer, def) {
@@ -604,19 +550,17 @@ async function addZone(mkLayer, def) {
   map.removeLayer(testLayer);
 
   let layer;
-  if (isInverted) {
+  if (isInverted || isMiss) {
     layer = mkLayer({ color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3 });
-  } else if (isMiss) {
-    layer = mkLayer({ color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3 });
-    layer._isMiss = true;
+    if (isInverted) layer._isInverted = true;
+    if (isMiss) layer._isMiss = true;
   } else {
-    layer = mkLayer({ color:'transparent', weight:0, fillColor:'transparent', fillOpacity:0 });
+    layer = mkLayer({ color:'#58a6ff', weight:2, opacity:0.8, fillColor:'#58a6ff', fillOpacity:0.2 });
   }
   layer.addTo(map);
   bindLayerEvents(layer, id);
   st.zones.push({id, lbl, type: st.type, layer});
 
-  rebuildDisplay();
   renderList();
 }
 
@@ -627,7 +571,6 @@ function delZone(id){
   map.removeLayer(st.zones[i].layer);
   st.zones.splice(i,1);
   if(st.selId===id)st.selId=null;
-  rebuildDisplay();
   renderList();
 }
 
@@ -743,7 +686,7 @@ map.on('mouseup',async(e)=>{
     if(st.freeLayer){map.removeLayer(st.freeLayer);st.freeLayer=null;}
     const pts=convexHull(st.freePoints);st.freePoints=[];
     if(pts.length<3)return;
-    await addZone(s=>L.polygon(pts,s),'Draw zone');
+    await addZone(s=>{const l=L.polygon(pts,{...s,color:'#f85149',fillColor:'#f85149'});l._isMiss=true;return l;},'Draw zone');
   }
 });
 
@@ -842,7 +785,7 @@ mc.addEventListener('touchend',async e=>{
     if(st.freeLayer){map.removeLayer(st.freeLayer);st.freeLayer=null;}
     const pts=convexHull(st.freePoints);st.freePoints=[];
     if(pts.length<3)return;
-    await addZone(s=>L.polygon(pts,s),'Draw zone');
+    await addZone(s=>{const l=L.polygon(pts,{...s,color:'#f85149',fillColor:'#f85149'});l._isMiss=true;return l;},'Draw zone');
   }
 },{passive:false});
 
@@ -879,7 +822,7 @@ document.getElementById('btn-clear').addEventListener('click',()=>{
   showConfirm(`All ${st.zones.length} zone(s) delete?`, ()=>{
     st.zones.forEach(z=>map.removeLayer(z.layer));
     st.zones=[];st.selId=null;
-    if(displayLayer){map.removeLayer(displayLayer);displayLayer=null;}
+    
     renderList();
   });
 });
