@@ -508,6 +508,11 @@ const st={mode:'none',type:'hider',drawType:'miss',zones:[],selId:null,drawing:f
 const zoneHistory = {};  // id → deleted zone (for inline undo)
 const thermoHistory = {}; // id → deleted thermo constraint (for inline undo)
 
+let useImperial = false;
+function toDisplay(meters) { return useImperial ? (meters/1609.344).toFixed(1)+' mi' : (meters/1000).toFixed(1)+' km'; }
+function unitLabel() { return useImperial ? 'mi' : 'km'; }
+function toMeters(val) { return useImperial ? val*1609.344 : val*1000; }
+
 const map=L.map('map',{center:[51.1,10.4],zoom:6,zoomControl:false,tap:true,tapTolerance:15});
 L.control.zoom({position:'topleft'}).addTo(map);
 
@@ -1004,6 +1009,14 @@ function invertedCircleLayer(lat, lng, radiusM, style) {
   return layer;
 }
 
+// ── SHARED SEARCH HELPER ──────────────────────────────────
+const _searchDismissTargets = [];
+document.addEventListener('click', e => {
+  _searchDismissTargets.forEach(({inp, res}) => {
+    if (!inp.contains(e.target) && !res.contains(e.target)) res.style.display = 'none';
+  });
+});
+
 // ── RADAR MANUAL MODE ─────────────────────────────────────
 let radarManualMode = false;
 let radarManualPos = null;
@@ -1499,7 +1512,6 @@ document.getElementById('btn-tp-reset').addEventListener('click', () => {
   tip('Thermometer reset');
 });
 
-// ── SHARED SEARCH HELPER ──────────────────────────────────
 function makeSearch(inputId, resultsId, onSelect) {
   const inp = document.getElementById(inputId);
   const res = document.getElementById(resultsId);
@@ -1537,12 +1549,6 @@ function makeSearch(inputId, resultsId, onSelect) {
   });
   _searchDismissTargets.push({inp, res});
 }
-const _searchDismissTargets = [];
-document.addEventListener('click', e => {
-  _searchDismissTargets.forEach(({inp, res}) => {
-    if (!inp.contains(e.target) && !res.contains(e.target)) res.style.display = 'none';
-  });
-});
 
 // ── THERMOMETER MANUAL MODE ───────────────────────────────
 (function(){
@@ -1756,18 +1762,6 @@ const _measInterval = setInterval(() => {
 })();
 
 // ── UNITS (metric / imperial) ─────────────────────────────
-let useImperial = false;
-
-function toDisplay(meters) {
-  if (useImperial) return (meters / 1609.344).toFixed(1) + ' mi';
-  return (meters / 1000).toFixed(1) + ' km';
-}
-
-function unitLabel() { return useImperial ? 'mi' : 'km'; }
-
-function toMeters(val) {
-  return useImperial ? val * 1609.344 : val * 1000;
-}
 
 document.getElementById('btn-locate').addEventListener('click', () => {
   if (locationMarker) {
