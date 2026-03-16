@@ -140,6 +140,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 .units-ctrl{display:block;width:30px;height:30px;line-height:30px;text-align:center;font-size:11px;font-weight:600;background:var(--bg1) !important;color:var(--text1) !important;border:none !important;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;font-family:inherit}
 .units-ctrl:hover{background:var(--bg3) !important}
 
+
 /* Leaflet */
 .leaflet-control-zoom{border:1px solid var(--border2) !important;border-radius:var(--r10) !important;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.4) !important}
 .leaflet-control-zoom a{background:var(--bg1) !important;color:var(--text1) !important;border-color:var(--border) !important}
@@ -407,7 +408,11 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     <div class="sheet-handle"></div>
     <div class="sheet-header">
       <h3>Zones (<span id="zp-count2">0</span>)</h3>
-<button class="sheet-close" id="zone-panel-close">×</button>
+      <button class="sheet-close" id="zone-panel-close">×</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 18px 10px;border-bottom:1px solid var(--border);flex-shrink:0">
+      <span style="font-size:11px;color:var(--text2);flex-shrink:0">Miss-Farbe:</span>
+      <input type="color" id="miss-color-picker" style="width:32px;height:32px;border:none;border-radius:50%;padding:0;cursor:pointer;background:none">
     </div>
     <div id="zone-panel-list" class="sheet-body"></div>
   </div>
@@ -503,6 +508,20 @@ document.getElementById('btn-thermo-close').addEventListener('click', () => {
 
 const COLORS={seeker:{fill:'#f85149',stroke:'#f85149'},hider:{fill:'#58a6ff',stroke:'#58a6ff'},neutral:{fill:'#3fb950',stroke:'#3fb950'},custom:{fill:'#d29922',stroke:'#d29922'}};
 const MODE_LABELS={move:'Pan',free:'Draw',circ:'Radar'};
+let missColor = localStorage.getItem('missColor') || '#f85149';
+function setMissColor(c) {
+  missColor = c;
+  localStorage.setItem('missColor', c);
+  const picker = document.getElementById('miss-color-picker');
+  if (picker) picker.value = c;
+  // Alle bestehenden Miss-Zonen auf der Karte umfärben
+  st.zones.forEach(z => {
+    if (z.layer && (z.layer._isMiss || z.layer._isInverted)) {
+      z.layer.setStyle({color: c, fillColor: c});
+    }
+  });
+}
+document.getElementById('miss-color-picker').addEventListener('input', e => setMissColor(e.target.value));
 const TYPE_LABELS={seeker:'Seeker',hider:'Hider',neutral:'Neutral',custom:'Custom'};
 const st={mode:'none',type:'hider',drawType:'miss',zones:[],selId:null,drawing:false,startLL:null,prevLayer:null,freePoints:[],freeLayer:null,pendCenter:null,labelCb:null};
 const zoneHistory = {};  // id → deleted zone (for inline undo)
@@ -823,11 +842,11 @@ async function addZone(mkLayer, def, askName=false) {
     layer = mkLayer({ color:'#3fbf6e', weight:2, opacity:0.8, fillColor:'#3fbf6e', fillOpacity:0.3 });
     layer._isHit = true;
   } else if (isInverted || isMiss) {
-    layer = mkLayer({ color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3 });
+    layer = mkLayer({ color:missColor, weight:2, opacity:0.8, fillColor:missColor, fillOpacity:0.3 });
     if (isInverted) layer._isInverted = true;
     if (isMiss) layer._isMiss = true;
   } else {
-    layer = mkLayer({ color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3 });
+    layer = mkLayer({ color:missColor, weight:2, opacity:0.8, fillColor:missColor, fillOpacity:0.3 });
     layer._isMiss = true;
   }
   layer.addTo(map);
@@ -943,7 +962,7 @@ map.on('mousemove',(e)=>{
     st.freePoints.push(e.latlng);
     const hull=convexHull(st.freePoints);
     if(hull.length>1){
-      const dc=st.drawType==='hit'?'#3fbf6e':'#f85149';
+      const dc=st.drawType==='hit'?'#3fbf6e':missColor;
       if(!st.freeLayer) st.freeLayer=L.polygon(hull,{color:dc,fillColor:dc,fillOpacity:0.25,weight:1.5,dashArray:'4 3',opacity:.6}).addTo(map);
       else st.freeLayer.setLatLngs(hull);
     }
@@ -1057,7 +1076,7 @@ async function drawRadar(hit) {
     await addZone(s => invertedCircleLayer(ll.lat, ll.lng, radiusM, s), label);
   } else {
     await addZone(s => {
-      const l = L.circle([ll.lat,ll.lng],{radius:radiusM,...s,color:'#f85149',fillColor:'#f85149'});
+      const l = L.circle([ll.lat,ll.lng],{radius:radiusM,...s,color:missColor,fillColor:missColor});
       l._isMiss = true;
       return l;
     }, label);
@@ -1113,7 +1132,7 @@ mc.addEventListener('touchmove',e=>{
     st.freePoints.push(ll);
     const hull=convexHull(st.freePoints);
     if(hull.length>1){
-      const dc=st.drawType==='hit'?'#3fbf6e':'#f85149';
+      const dc=st.drawType==='hit'?'#3fbf6e':missColor;
       if(!st.freeLayer) st.freeLayer=L.polygon(hull,{color:dc,fillColor:dc,fillOpacity:0.25,weight:1.5,dashArray:'4 3',opacity:.6}).addTo(map);
       else st.freeLayer.setLatLngs(hull);
     }
@@ -1683,7 +1702,7 @@ async function measDraw(closer) {
     await addZone(s => invertedCircleLayer(refLat, refLng, radius, s), label);
   } else {
     await addZone(s => {
-      const l = L.circle([refLat, refLng], {radius, ...s, color:'#f85149', fillColor:'#f85149'});
+      const l = L.circle([refLat, refLng], {radius, ...s, color:missColor, fillColor:missColor});
       l._isMiss = true;
       return l;
     }, label);
@@ -1851,7 +1870,7 @@ function serializeZone(z) {
 }
 
 function deserializeZone(id, data) {
-  const style = {color:'#f85149', weight:2, opacity:0.8, fillColor:'#f85149', fillOpacity:0.3};
+  const style = {color:missColor, weight:2, opacity:0.8, fillColor:missColor, fillOpacity:0.3};
   let layer;
   if (data.isInverted && data.geo.type === 'poly-inv') {
     const pts = data.geo.latlngs.map(p => L.latLng(p[0], p[1]));
@@ -1989,6 +2008,7 @@ window.addEventListener('beforeunload', () => {
   clearInterval(_measInterval);
 });
 
+document.getElementById('miss-color-picker').value = missColor;
 function _updateToolbarH() {
   const h = document.getElementById('toolbar').offsetHeight;
   document.documentElement.style.setProperty('--toolbar-h', h + 'px');
