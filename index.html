@@ -872,12 +872,10 @@ document.querySelectorAll('[data-mode]').forEach(b=>{
       return;
     }
     cancelDraw();
+    closeAllSheets();
     st.mode = clicked;
-    document.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     document.getElementById('st-mode').textContent = MODE_LABELS[st.mode]||st.mode;
-    document.getElementById('radar-sheet').classList.remove('open');
-    document.getElementById('draw-sheet').classList.remove('open');
     if(st.mode==='circ'){
       document.getElementById('radar-sheet').classList.add('open');
       if (!locationMarker) setRadarMode(true);
@@ -1114,8 +1112,20 @@ mc.addEventListener('touchend',async e=>{
 },{passive:false});
 
 
+// ── SHEET HELPER ──────────────────────────────────────────
+const SHEET_IDS = ['draw-sheet','radar-sheet','meas-sheet','thermo-panel','zone-panel'];
+function closeAllSheets() {
+  SHEET_IDS.forEach(id => document.getElementById(id).classList.remove('open'));
+  document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-measuring').classList.remove('active');
+  document.getElementById('btn-thermo').classList.remove('active');
+  tp.open = false;
+  st.mode = 'none';
+}
+
 // ── ZONE PANEL ────────────────────────────────────────────
 function openZonePanel() {
+  closeAllSheets();
   renderZonePanel();
   document.getElementById('zone-panel').classList.add('open');
 }
@@ -1302,9 +1312,14 @@ const tp = {
 };
 
 function toggleThermo() {
-  tp.open = !tp.open;
-  document.getElementById('thermo-panel').classList.toggle('open', tp.open);
-  document.getElementById('btn-thermo').classList.toggle('active', tp.open);}
+  const wasOpen = tp.open;
+  closeAllSheets(); // resets tp.open = false
+  if (!wasOpen) {
+    tp.open = true;
+    document.getElementById('thermo-panel').classList.add('open');
+    document.getElementById('btn-thermo').classList.add('active');
+  }
+}
 document.getElementById('btn-thermo').addEventListener('click', toggleThermo);
 
 function tpGetGPS(onSuccess) {
@@ -1590,6 +1605,7 @@ let measManualMode = false;
 })();
 
 function measOpen() {
+  closeAllSheets();
   document.getElementById('meas-sheet').classList.add('open');
   document.getElementById('btn-measuring').classList.add('active');
   // Schritt 1: Standort sofort aus GPS holen
