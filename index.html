@@ -291,7 +291,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       <button class="sheet-close" id="btn-radar-close">×</button>
     </div>
     <div class="sheet-body">
-      <div style="display:flex;gap:6px;margin-bottom:12px">
+      <div id="radar-mode-toggle" style="display:flex;gap:6px;margin-bottom:12px">
         <button id="btn-radar-mode-gps" class="sh-btn hit" style="flex:1;font-size:12px">📍 GPS</button>
         <button id="btn-radar-mode-manual" class="sh-btn ghost" style="flex:1;font-size:12px">🔍 Manual</button>
       </div>
@@ -321,7 +321,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       <button class="sheet-close" id="btn-meas-sheet-close">×</button>
     </div>
     <div class="sheet-body">
-      <div style="display:flex;gap:6px;margin-bottom:10px">
+      <div id="meas-mode-toggle" style="display:flex;gap:6px;margin-bottom:10px">
         <button id="btn-meas-mode-gps" class="sh-btn hit" style="flex:1;font-size:12px">📍 GPS</button>
         <button id="btn-meas-mode-manual" class="sh-btn ghost" style="flex:1;font-size:12px">🔍 Manual</button>
       </div>
@@ -356,7 +356,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     </div>
     <div class="sheet-body">
       <!-- Mode toggle -->
-      <div style="display:flex;gap:6px;margin-bottom:14px">
+      <div id="tp-mode-toggle" style="display:flex;gap:6px;margin-bottom:14px">
         <button id="btn-tp-mode-gps" class="sh-btn hit" style="flex:1;font-size:12px">📍 GPS</button>
         <button id="btn-tp-mode-manual" class="sh-btn ghost" style="flex:1;font-size:12px">🔍 Manual</button>
       </div>
@@ -729,6 +729,11 @@ function startLocation() {
         }).addTo(map);
         map.setView([lat, lng], 14);
         tip(`Location found · ±${Math.round(acc)}m`);
+        // GPS available → hide manual mode toggles
+        ['radar-mode-toggle','meas-mode-toggle','tp-mode-toggle'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = 'none';
+        });
       } else {
         locationMarker.setLatLng([lat, lng]);
         locationCircle.setLatLng([lat, lng]);
