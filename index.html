@@ -298,7 +298,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       </div>
       <div id="radar-manual-wrap" style="display:none;margin-bottom:12px;position:relative">
         <input id="radar-manual-search" type="text" placeholder="Search location…" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
-        <div id="radar-manual-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:180px;overflow-y:auto"></div>
+        <div id="radar-manual-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:9800;max-height:180px;overflow-y:auto"></div>
       </div>
       <div id="radar-gps-hint" style="font-size:12px;color:var(--text2);margin-bottom:12px">Draws a circle around your current GPS location.</div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
@@ -328,11 +328,11 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       </div>
       <div id="meas-manual-wrap" style="display:none;margin-bottom:10px;position:relative">
         <input id="meas-manual-search" type="text" placeholder="My location…" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
-        <div id="meas-manual-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:180px;overflow-y:auto"></div>
+        <div id="meas-manual-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:9800;max-height:180px;overflow-y:auto"></div>
       </div>
       <div style="position:relative;margin-bottom:12px">
         <input id="meas-search-input" type="text" placeholder="Search location…" autocomplete="off" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
-        <div id="meas-search-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:200px;overflow-y:auto"></div>
+        <div id="meas-search-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:9800;max-height:200px;overflow-y:auto"></div>
       </div>
       <div id="meas-selected" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--r6);padding:8px 10px;margin-bottom:12px">
         <div id="meas-selected-name" style="font-size:13px;font-weight:600;color:var(--gold);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
@@ -367,12 +367,12 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
         <div style="position:relative;margin-bottom:8px">
           <input id="tp-start-search" type="text" placeholder="Start location…" autocomplete="off"
             style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
-          <div id="tp-start-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:180px;overflow-y:auto"></div>
+          <div id="tp-start-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:9800;max-height:180px;overflow-y:auto"></div>
         </div>
         <div style="position:relative;margin-bottom:8px">
           <input id="tp-stop-search" type="text" placeholder="Stop location…" autocomplete="off"
             style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:13px;padding:8px 10px;outline:none;box-sizing:border-box">
-          <div id="tp-stop-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:10000;max-height:180px;overflow-y:auto"></div>
+          <div id="tp-stop-results" style="display:none;position:fixed;background:var(--bg1);border:1px solid var(--border2);border-radius:var(--r10);overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:9800;max-height:180px;overflow-y:auto"></div>
         </div>
         <button id="btn-tp-manual-set" class="sh-btn" style="border-color:var(--gold);color:var(--gold);background:rgba(232,184,75,.1)">Set Start & Stop</button>
       </div>
@@ -993,7 +993,7 @@ function invertedCircleLayer(lat, lng, radiusM, style) {
   const innerCircle = turf.circle([lng, lat], radiusKm, {steps, units:'kilometers'});
   const world = turf.polygon([[[-180,-85],[180,-85],[180,85],[-180,85],[-180,-85]]]);
   const inverted = turf.difference(world, innerCircle);
-  if (!inverted) return L.circle([lat, lng], {radius: radiusM, ...style});
+  if (!inverted) { const fb = L.circle([lat, lng], {radius: radiusM, ...style}); fb._isInverted = true; fb._origLat = lat; fb._origLng = lng; fb._origRadius = radiusM; return fb; }
   // Polygon with hole: [[outer ring], [inner ring (hole)]]
   const rings = inverted.geometry.coordinates.map(ring =>
     ring.map(c => L.latLng(c[1], c[0]))
@@ -1181,35 +1181,35 @@ function renderZonePanel() {
     </div>`;
   }).join('');
   list.innerHTML = zoneHtml + deletedHtml + thermoHtml + deletedThermoHtml;
-  list.querySelectorAll('.zp-del:not(.zp-tp-del)').forEach(btn => {
-    btn.addEventListener('click', () => delZone(btn.dataset.id));
-  });
-  list.querySelectorAll('.zp-undo:not(.zp-tp-undo)').forEach(btn => {
-    btn.addEventListener('click', () => undoZone(btn.dataset.id));
-  });
-  list.querySelectorAll('.zp-tp-del').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const c = tp.constraints.find(x => x.id === btn.dataset.id);
-      if (!c) return;
-      tp.constraints.splice(tp.constraints.indexOf(c), 1);
-      thermoHistory[c.id] = c;
-      tpRenderConstraints();
-      fbDeleteThermo(c.id);
-      renderZonePanel();
-    });
-  });
-  list.querySelectorAll('.zp-tp-undo').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const c = thermoHistory[btn.dataset.id];
-      if (!c) return;
-      delete thermoHistory[btn.dataset.id];
-      tp.constraints.push(c);
-      tpRenderConstraints();
-      fbWriteThermo(c);
-      renderZonePanel();
-    });
-  });
 }
+
+// Single delegated listener on zone-panel-list (set up once, not on every render)
+document.getElementById('zone-panel-list').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-id]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  if (btn.classList.contains('zp-tp-undo')) {
+    const c = thermoHistory[id];
+    if (!c) return;
+    delete thermoHistory[id];
+    tp.constraints.push(c);
+    tpRenderConstraints();
+    fbWriteThermo(c);
+    renderZonePanel();
+  } else if (btn.classList.contains('zp-tp-del')) {
+    const c = tp.constraints.find(x => x.id === id);
+    if (!c) return;
+    tp.constraints.splice(tp.constraints.indexOf(c), 1);
+    thermoHistory[id] = c;
+    tpRenderConstraints();
+    fbDeleteThermo(id);
+    renderZonePanel();
+  } else if (btn.classList.contains('zp-undo')) {
+    undoZone(id);
+  } else if (btn.classList.contains('zp-del')) {
+    delZone(id);
+  }
+});
 document.getElementById('btn-zones').addEventListener('click', () => {
   document.getElementById('zone-panel').classList.contains('open') ? closeZonePanel() : openZonePanel();
 });
@@ -1410,13 +1410,10 @@ function tpRenderConstraints() {
 
   // Zeichne alle bisherigen Constraints
   tp.constraints.forEach(c => {
-    tpDrawBisector(c.startPos, c.stopPos, c.warmer);
+    if (c.startPos && c.stopPos) tpDrawBisector(c.startPos, c.stopPos, c.warmer);
   });
 }
 
-function tpRenderLog() {
-  // log removed
-}
 
 // START Button
 document.getElementById('btn-tp-start').addEventListener('click', () => {
@@ -1538,8 +1535,14 @@ function makeSearch(inputId, resultsId, onSelect) {
       } catch(e) { res.style.display = 'none'; }
     }, 350);
   });
-  document.addEventListener('click', e => { if (!inp.contains(e.target) && !res.contains(e.target)) res.style.display = 'none'; });
+  _searchDismissTargets.push({inp, res});
 }
+const _searchDismissTargets = [];
+document.addEventListener('click', e => {
+  _searchDismissTargets.forEach(({inp, res}) => {
+    if (!inp.contains(e.target) && !res.contains(e.target)) res.style.display = 'none';
+  });
+});
 
 // ── THERMOMETER MANUAL MODE ───────────────────────────────
 (function(){
@@ -1702,7 +1705,7 @@ document.getElementById('btn-meas-clear').addEventListener('click', () => {
 });
 
 // GPS aktualisiert → Schritt 1 updaten falls Panel offen
-setInterval(() => {
+const _measInterval = setInterval(() => {
   if (!measManualMode && document.getElementById('meas-sheet').classList.contains('open')) measUpdateMyPos();
 }, 3000);
 
@@ -1749,7 +1752,7 @@ setInterval(() => {
   });
 
   inp.addEventListener('keydown', e => { if (e.key === 'Escape') res.style.display = 'none'; });
-  document.addEventListener('click', e => { if (!inp.contains(e.target) && !res.contains(e.target)) res.style.display = 'none'; });
+  _searchDismissTargets.push({inp: inp, res: res});
 })();
 
 // ── UNITS (metric / imperial) ─────────────────────────────
@@ -1989,6 +1992,7 @@ function fbInit(pwHash) {
 
 window.addEventListener('beforeunload', () => {
   if (locationWatch) navigator.geolocation.clearWatch(locationWatch);
+  clearInterval(_measInterval);
 });
 
 function _updateToolbarH() {
