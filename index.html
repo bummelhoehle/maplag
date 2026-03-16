@@ -569,14 +569,32 @@ const tileProvidersLang = {
   en: [{ url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', opts: { attribution: '&copy; CARTO &copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20 } }],
 };
 
-let tileProviders = tileProvidersDefault;
 let mapLang = localStorage.getItem('mapLang') || 'de';
+
+const mapThemeStates = [
+  { key: 'default', providers: tileProvidersDefault, icon: '🗺',  lbl: 'Map' },
+  { key: 'light',   providers: tileProvidersLight,   icon: '🌕', lbl: 'Light map' },
+  { key: 'dark',    providers: tileProvidersDark,    icon: '🌑', lbl: 'Dark map' },
+];
+let mapThemeIdx = (() => { const i = mapThemeStates.findIndex(s => s.key === (localStorage.getItem('mapTheme') || 'default')); return i < 0 ? 0 : i; })();
+let tileProviders = mapThemeStates[mapThemeIdx].providers;
 
 let currentTile = null;
 
 function getActiveTileProviders() {
-  const langTiles = tileProvidersLang[mapLang] || [];
+  // Lang tiles only for default theme — light/dark have their own distinct style
+  const langTiles = mapThemeStates[mapThemeIdx].key === 'default' ? (tileProvidersLang[mapLang] || []) : [];
   return [...langTiles, ...tileProviders];
+}
+
+function applyMapTheme(i) {
+  mapThemeIdx = i;
+  const s = mapThemeStates[mapThemeIdx];
+  tileProviders = s.providers;
+  loadTiles(0);
+  const btn = document.getElementById('btn-map-theme');
+  if (btn) { btn.textContent = s.icon; btn.title = s.lbl; }
+  localStorage.setItem('mapTheme', s.key);
 }
 
 function loadTiles(idx) {
@@ -643,9 +661,10 @@ const MapThemeControl = L.Control.extend({
   onAdd: function() {
     const btn = L.DomUtil.create('button','leaflet-bar leaflet-control units-ctrl');
     btn.id = 'btn-map-theme';
-    btn.textContent = '🗺';
-    btn.title = 'Toggle map style';
+    btn.textContent = mapThemeStates[mapThemeIdx].icon;
+    btn.title = mapThemeStates[mapThemeIdx].lbl;
     L.DomEvent.disableClickPropagation(btn);
+    btn.onclick = e => { e.stopPropagation(); applyMapTheme((mapThemeIdx + 1) % mapThemeStates.length); };
     return btn;
   }
 });
@@ -1716,28 +1735,7 @@ tip(T.start, 4000);
 })();
 
 // ── MAP TILE THEME ────────────────────────────────────────
-(function(){
-  const btn = document.getElementById('btn-map-theme');
-  const states = [
-    { key: 'default', providers: tileProvidersDefault, icon: '🗺',  lbl: 'Map' },
-    { key: 'light',   providers: tileProvidersLight,   icon: '🌕', lbl: 'Light map' },
-    { key: 'dark',    providers: tileProvidersDark,    icon: '🌑', lbl: 'Dark map' },
-  ];
-  const saved = localStorage.getItem('mapTheme') || 'default';
-  let idx = states.findIndex(s => s.key === saved);
-  if (idx < 0) idx = 0;
-  const apply = i => {
-    idx = i;
-    const s = states[idx];
-    tileProviders = s.providers;
-    loadTiles(0);
-    btn.textContent = s.icon;
-    btn.title = s.lbl;
-    localStorage.setItem('mapTheme', s.key);
-  };
-  apply(idx);
-  btn.addEventListener('click', () => apply((idx + 1) % states.length));
-})();
+// (handled by applyMapTheme + MapThemeControl above)
 
 
 // ── FIREBASE REALTIME SYNC ────────────────────────────────
