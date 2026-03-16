@@ -406,7 +406,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     <div class="sheet-handle"></div>
     <div class="sheet-header">
       <h3>Zones (<span id="zp-count">0</span>)</h3>
-      <button class="sheet-close" id="zone-panel-close">×</button>
+<button class="sheet-close" id="zone-panel-close">×</button>
     </div>
     <div id="zone-panel-list" class="sheet-body"></div>
   </div>
@@ -504,6 +504,8 @@ const COLORS={seeker:{fill:'#f85149',stroke:'#f85149'},hider:{fill:'#58a6ff',str
 const MODE_LABELS={move:'Pan',free:'Draw',circ:'Radar'};
 const TYPE_LABELS={seeker:'Seeker',hider:'Hider',neutral:'Neutral',custom:'Custom'};
 const st={mode:'none',type:'hider',drawType:'miss',zones:[],selId:null,drawing:false,startLL:null,prevLayer:null,freePoints:[],freeLayer:null,pendCenter:null,labelCb:null};
+const zoneHistory = {};  // id → deleted zone (for inline undo)
+const thermoHistory = {}; // id → deleted thermo constraint (for inline undo)
 
 const map=L.map('map',{center:[51.1,10.4],zoom:6,zoomControl:false,tap:true,tapTolerance:15});
 L.control.zoom({position:'topleft'}).addTo(map);
@@ -834,10 +836,22 @@ function selZone(id){st.selId=id;renderList();}
 function delZone(id){
   const i=st.zones.findIndex(z=>z.id===id);
   if(i<0)return;
-  map.removeLayer(st.zones[i].layer);
+  const zone=st.zones[i];
+  map.removeLayer(zone.layer);
   st.zones.splice(i,1);
   if(st.selId===id)st.selId=null;
+  zoneHistory[id]=zone;
   fbDeleteZone(id);
+  renderList();
+}
+
+function undoZone(id){
+  const zone=zoneHistory[id];
+  if(!zone)return;
+  delete zoneHistory[id];
+  zone.layer.addTo(map);
+  st.zones.push(zone);
+  fbWriteZone(zone.id, serializeZone({lbl:zone.lbl, layer:zone.layer}));
   renderList();
 }
 
@@ -1109,39 +1123,71 @@ function closeZonePanel() {
   document.getElementById('zone-panel').classList.remove('open');
 }
 function renderZonePanel() {
-  const n = st.zones.length + tp.constraints.length;
-  document.getElementById('zp-count').textContent = n;
+  const deletedZones = Object.values(zoneHistory);
+  const deletedThermos = Object.values(thermoHistory);
+  const total = st.zones.length + tp.constraints.length + deletedZones.length + deletedThermos.length;
+  document.getElementById('zp-count').textContent = total;
   const list = document.getElementById('zone-panel-list');
-  if (!n) {
+  if (!st.zones.length && !tp.constraints.length && !deletedZones.length && !deletedThermos.length) {
     list.innerHTML = '<div class="zp-empty">No zones drawn yet.</div>';
     return;
   }
   const zoneHtml = st.zones.map(z => `
     <div class="zp-item">
-      <div class="zp-dot" style="background:${z.layer && z.layer._isMiss ? 'var(--red)' : 'var(--green)'}"></div>
+      <div class="zp-dot" style="background:${z.layer && (z.layer._isMiss || z.layer._isInverted) ? 'var(--red)' : 'var(--green)'}"></div>
       <div class="zp-name">${z.lbl}</div>
       <button class="zp-del" data-id="${z.id}">× Del</button>
     </div>`).join('');
-  const thermoHtml = tp.constraints.map((c, i) => {
+  const deletedHtml = deletedZones.map(z => `
+    <div class="zp-item" style="opacity:0.45">
+      <div class="zp-dot" style="background:${z.layer && (z.layer._isMiss || z.layer._isInverted) ? 'var(--red)' : 'var(--green)'}"></div>
+      <div class="zp-name" style="text-decoration:line-through">${z.lbl}</div>
+      <button class="zp-undo" data-id="${z.id}">↩ Undo</button>
+    </div>`).join('');
+  const thermoHtml = tp.constraints.map(c => {
     const dist = Math.round(haversine(c.startPos.lat, c.startPos.lng, c.stopPos.lat, c.stopPos.lng));
     const distStr = dist >= 1000 ? (dist/1000).toFixed(1)+'km' : dist+'m';
     const label = c.warmer ? `Warmer (${distStr})` : `Colder (${distStr})`;
     return `<div class="zp-item">
       <div class="zp-dot" style="background:var(--gold)"></div>
       <div class="zp-name">🌡 ${label}</div>
-      <button class="zp-del zp-tp-del" data-idx="${i}">× Del</button>
+      <button class="zp-del zp-tp-del" data-id="${c.id}">× Del</button>
     </div>`;
   }).join('');
-  list.innerHTML = zoneHtml + (tp.constraints.length ? thermoHtml : '');
+  const deletedThermoHtml = deletedThermos.map(c => {
+    const dist = Math.round(haversine(c.startPos.lat, c.startPos.lng, c.stopPos.lat, c.stopPos.lng));
+    const distStr = dist >= 1000 ? (dist/1000).toFixed(1)+'km' : dist+'m';
+    const label = c.warmer ? `Warmer (${distStr})` : `Colder (${distStr})`;
+    return `<div class="zp-item" style="opacity:0.45">
+      <div class="zp-dot" style="background:var(--gold)"></div>
+      <div class="zp-name" style="text-decoration:line-through">🌡 ${label}</div>
+      <button class="zp-undo zp-tp-undo" data-id="${c.id}">↩ Undo</button>
+    </div>`;
+  }).join('');
+  list.innerHTML = zoneHtml + deletedHtml + thermoHtml + deletedThermoHtml;
   list.querySelectorAll('.zp-del:not(.zp-tp-del)').forEach(btn => {
-    btn.addEventListener('click', () => {
-      delZone(btn.dataset.id);
-      renderZonePanel();
-    });
+    btn.addEventListener('click', () => delZone(btn.dataset.id));
+  });
+  list.querySelectorAll('.zp-undo:not(.zp-tp-undo)').forEach(btn => {
+    btn.addEventListener('click', () => undoZone(btn.dataset.id));
   });
   list.querySelectorAll('.zp-tp-del').forEach(btn => {
     btn.addEventListener('click', () => {
-      tp.constraints.splice(+btn.dataset.idx, 1);
+      const c = tp.constraints.find(x => x.id === btn.dataset.id);
+      if (!c) return;
+      tp.constraints.splice(tp.constraints.indexOf(c), 1);
+      thermoHistory[c.id] = c;
+      tpRenderConstraints();
+      fbWriteThermos();
+      renderZonePanel();
+    });
+  });
+  list.querySelectorAll('.zp-tp-undo').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const c = thermoHistory[btn.dataset.id];
+      if (!c) return;
+      delete thermoHistory[btn.dataset.id];
+      tp.constraints.push(c);
       tpRenderConstraints();
       fbWriteThermos();
       renderZonePanel();
@@ -1404,7 +1450,7 @@ document.getElementById('btn-tp-stop').addEventListener('click', () => {
 // Antwort: Wärmer
 function tpAnswer(warmer) {
   if (!tp.startPos || !tp.stopPos) return;
-  tp.constraints.push({startPos: {...tp.startPos}, stopPos: {...tp.stopPos}, warmer});
+  tp.constraints.push({id: genId(), startPos: {...tp.startPos}, stopPos: {...tp.stopPos}, warmer});
   tpRenderConstraints();
   fbWriteThermos();
   tp.startPos = null; tp.stopPos = null;
@@ -1838,7 +1884,7 @@ function fbListen() {
     // Thermos neu aufbauen
     tp.layers.forEach(l => map.removeLayer(l)); tp.layers = [];
     tp.markers.forEach(m => map.removeLayer(m)); tp.markers = [];
-    tp.constraints = Array.isArray(data.thermos) ? data.thermos : [];
+    tp.constraints = Array.isArray(data.thermos) ? data.thermos.map(c => c.id ? c : {...c, id: genId()}) : [];
     tpRenderConstraints();
 
     renderList();
