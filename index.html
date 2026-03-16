@@ -531,30 +531,14 @@ new UnitsControl().addTo(map);
 // Multiple tile providers with automatic fallback
 const tileProvidersDark = [
   {
-    url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
-    opts: { attribution: '&copy; Stadia Maps &copy; OpenStreetMap', maxZoom: 20 }
-  },
-  {
     url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
     opts: { attribution: '&copy; CARTO &copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20 }
-  },
-  {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    opts: { attribution: '&copy; OpenStreetMap', subdomains: 'abc', maxZoom: 19 }
   }
 ];
 const tileProvidersLight = [
   {
-    url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
-    opts: { attribution: '&copy; Stadia Maps &copy; OpenStreetMap', maxZoom: 20 }
-  },
-  {
     url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
     opts: { attribution: '&copy; CARTO &copy; OpenStreetMap', subdomains: 'abcd', maxZoom: 20 }
-  },
-  {
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    opts: { attribution: '&copy; OpenStreetMap', subdomains: 'abc', maxZoom: 19 }
   }
 ];
 const tileProvidersDefault = [
