@@ -1188,7 +1188,7 @@ function renderZonePanel() {
       tp.constraints.splice(tp.constraints.indexOf(c), 1);
       thermoHistory[c.id] = c;
       tpRenderConstraints();
-      fbWriteThermos();
+      fbDeleteThermo(c.id);
       renderZonePanel();
     });
   });
@@ -1199,7 +1199,7 @@ function renderZonePanel() {
       delete thermoHistory[btn.dataset.id];
       tp.constraints.push(c);
       tpRenderConstraints();
-      fbWriteThermos();
+      fbWriteThermo(c);
       renderZonePanel();
     });
   });
@@ -1465,9 +1465,10 @@ document.getElementById('btn-tp-stop').addEventListener('click', () => {
 // Antwort: Wärmer
 function tpAnswer(warmer) {
   if (!tp.startPos || !tp.stopPos) return;
-  tp.constraints.push({id: genId(), startPos: {...tp.startPos}, stopPos: {...tp.stopPos}, warmer});
+  const newC = {id: genId(), startPos: {...tp.startPos}, stopPos: {...tp.stopPos}, warmer};
+  tp.constraints.push(newC);
   tpRenderConstraints();
-  fbWriteThermos();
+  fbWriteThermo(newC);
   tp.startPos = null; tp.stopPos = null;
   document.getElementById('thermo-panel').classList.remove('open');
   document.getElementById('btn-thermo').classList.remove('active');
@@ -1900,12 +1901,30 @@ function fbListen() {
     // Zones neu aufbauen
     st.zones.forEach(z => map.removeLayer(z.layer));
     st.zones = [];
-    Object.entries(data.zones || {}).forEach(([id, zd]) => deserializeZone(id, zd));
+    Object.keys(zoneHistory).forEach(k => delete zoneHistory[k]);
+    Object.entries(data.zones || {}).forEach(([id, zd]) => {
+      if (zd.deleted) {
+        zoneHistory[id] = {id, lbl: zd.lbl, fbData: zd};
+      } else {
+        deserializeZone(id, zd);
+      }
+    });
 
     // Thermos neu aufbauen
     tp.layers.forEach(l => map.removeLayer(l)); tp.layers = [];
     tp.markers.forEach(m => map.removeLayer(m)); tp.markers = [];
-    tp.constraints = Array.isArray(data.thermos) ? data.thermos.map(c => c.id ? c : {...c, id: genId()}) : [];
+    Object.keys(thermoHistory).forEach(k => delete thermoHistory[k]);
+    tp.constraints = [];
+    const thermoData = data.thermos || {};
+    if (Array.isArray(thermoData)) {
+      // backward compat: old array format
+      tp.constraints = thermoData.map(c => c.id ? c : {...c, id: genId()});
+    } else {
+      Object.entries(thermoData).forEach(([id, c]) => {
+        if (c.deleted) { thermoHistory[id] = {...c, id}; }
+        else { tp.constraints.push({...c, id}); }
+      });
+    }
     tpRenderConstraints();
 
     renderList();
