@@ -837,21 +837,21 @@ function delZone(id){
   const i=st.zones.findIndex(z=>z.id===id);
   if(i<0)return;
   const zone=st.zones[i];
+  const fbData=serializeZone({lbl:zone.lbl, layer:zone.layer});
   map.removeLayer(zone.layer);
   st.zones.splice(i,1);
   if(st.selId===id)st.selId=null;
-  zoneHistory[id]=zone;
+  zoneHistory[id]={id, lbl:zone.lbl, fbData};
   fbDeleteZone(id);
   renderList();
 }
 
 function undoZone(id){
-  const zone=zoneHistory[id];
-  if(!zone)return;
+  const entry=zoneHistory[id];
+  if(!entry)return;
   delete zoneHistory[id];
-  zone.layer.addTo(map);
-  st.zones.push(zone);
-  fbWriteZone(zone.id, serializeZone({lbl:zone.lbl, layer:zone.layer}));
+  deserializeZone(id, entry.fbData);
+  fbWriteZone(id, entry.fbData);
   renderList();
 }
 
@@ -1876,15 +1876,20 @@ function fbWriteZone(id, data) {
 }
 function fbDeleteZone(id) {
   if (!fbDb || fbReceiving) return;
-  fbDb.ref(`${fbRoomPath()}/zones/${id}`).remove();
+  fbDb.ref(`${fbRoomPath()}/zones/${id}/deleted`).set(true);
 }
 function fbClearZones() {
   if (!fbDb) return;
   fbDb.ref(`${fbRoomPath()}/zones`).remove();
 }
-function fbWriteThermos() {
+function fbWriteThermo(c) {
   if (!fbDb || fbReceiving) return;
-  fbDb.ref(`${fbRoomPath()}/thermos`).set(tp.constraints.length ? tp.constraints : null);
+  const {id, startPos, stopPos, warmer} = c;
+  fbDb.ref(`${fbRoomPath()}/thermos/${id}`).set({id, startPos, stopPos, warmer});
+}
+function fbDeleteThermo(id) {
+  if (!fbDb || fbReceiving) return;
+  fbDb.ref(`${fbRoomPath()}/thermos/${id}/deleted`).set(true);
 }
 
 function fbListen() {
