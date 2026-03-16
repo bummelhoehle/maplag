@@ -1739,17 +1739,6 @@ tip(T.start, 4000);
   btn.addEventListener('click', () => apply((idx + 1) % states.length));
 })();
 
-(function() {
-  const _h = location.hostname, _p = location.protocol;
-  const _x = atob('bG9jYWxob3N0'),  _y = atob('MTI3LjAuMC4x'),  _z = atob('ZmlsZTo=');
-  if (_h === _x || _h === _y || _p === _z) return;
-  ['btn-radar-mode-gps',  'btn-radar-mode-manual',
-   'btn-meas-mode-gps',   'btn-meas-mode-manual',
-   'btn-tp-mode-gps',     'btn-tp-mode-manual'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.parentElement.style.display = 'none';
-  });
-})();
 
 // ── FIREBASE REALTIME SYNC ────────────────────────────────
 // 1. Firebase-Projekt anlegen: https://console.firebase.google.com
