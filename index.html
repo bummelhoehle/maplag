@@ -1899,21 +1899,35 @@ document.querySelectorAll('[data-admin-zoom]').forEach(btn => {
   });
 });
 
-function geoToMainRing(geometry) {
+// Inverted layer from raw GeoJSON geometry (Polygon or MultiPolygon)
+function adminInvertedLayer(geometry, style) {
+  try {
+    const world = turf.polygon([[[-180,-85],[180,-85],[180,85],[-180,85],[-180,-85]]]);
+    const feature = {type:'Feature', geometry};
+    const inverted = turf.difference(world, feature);
+    if (!inverted) return null;
+    const rings = inverted.geometry.coordinates.map(ring => ring.map(c => L.latLng(c[1], c[0])));
+    const layer = L.polygon(rings, style);
+    layer._isInverted = true;
+    layer._adminGeo = geometry;
+    return layer;
+  } catch(e) { return null; }
+}
+
+// Direct polygon layer from raw GeoJSON geometry (all parts of MultiPolygon)
+function adminPolyLayer(geometry, style) {
+  let rings;
   if (geometry.type === 'Polygon') {
-    return geometry.coordinates[0].map(c => L.latLng(c[1], c[0]));
-  } else if (geometry.type === 'MultiPolygon') {
-    // Take largest polygon by coordinate count
-    const largest = geometry.coordinates.reduce((a, b) =>
-      a[0].length > b[0].length ? a : b
-    );
-    return largest[0].map(c => L.latLng(c[1], c[0]));
+    rings = [geometry.coordinates[0].map(c => L.latLng(c[1], c[0]))];
+  } else {
+    rings = geometry.coordinates.map(poly => poly[0].map(c => L.latLng(c[1], c[0])));
   }
-  return null;
+  const layer = L.polygon(rings, style);
+  layer._adminGeo = geometry;
+  return layer;
 }
 
 async function adminFetchBoundary(lat, lng) {
-  // Show loading state
   document.getElementById('admin-level-select').style.display = 'block';
   document.getElementById('admin-confirm').style.display = 'none';
   document.getElementById('admin-loading').style.display = 'block';
@@ -1924,20 +1938,19 @@ async function adminFetchBoundary(lat, lng) {
     const data = await fetch(url, {headers: {'Accept-Language': mapLang === 'local' ? '' : mapLang}}).then(r => r.json());
 
     if (!data.geojson) { tip('Keine Grenze gefunden'); document.getElementById('admin-loading').style.display = 'none'; return; }
-
-    const latlngs = geoToMainRing(data.geojson);
-    if (!latlngs || latlngs.length < 3) { tip('Grenze nicht darstellbar'); document.getElementById('admin-loading').style.display = 'none'; return; }
+    const geo = data.geojson;
+    if (!geo.coordinates || !geo.coordinates.length) { tip('Grenze nicht darstellbar'); document.getElementById('admin-loading').style.display = 'none'; return; }
 
     if (adminPreviewLayer) { map.removeLayer(adminPreviewLayer); }
-    adminPreviewLayer = L.polygon(latlngs, {
-      color: '#e8b84b', weight: 2.5, opacity: 0.9,
-      fillColor: '#e8b84b', fillOpacity: 0.15, dashArray: '6 4'
+    // Preview via L.geoJSON — renders MultiPolygon correctly (alle Teile)
+    adminPreviewLayer = L.geoJSON({type:'Feature', geometry: geo}, {
+      style: { color:'#e8b84b', weight:2.5, opacity:0.9, fillColor:'#e8b84b', fillOpacity:0.15, dashArray:'6 4' }
     }).addTo(map);
 
     const shortName = data.address
       ? (data.address.country || data.address.state || data.address.county || data.address.city || data.name || data.display_name.split(',')[0])
       : data.display_name.split(',')[0];
-    adminPendingData = {name: shortName, fullName: data.display_name, latlngs};
+    adminPendingData = {name: shortName, geometry: geo};
 
     document.getElementById('admin-name').textContent = shortName;
     document.getElementById('admin-loading').style.display = 'none';
@@ -1953,7 +1966,7 @@ async function adminFetchBoundary(lat, lng) {
 
 async function adminConfirm(hit) {
   if (!adminPendingData) return;
-  const {name, latlngs} = adminPendingData;
+  const {name, geometry} = adminPendingData;
   if (adminPreviewLayer) { map.removeLayer(adminPreviewLayer); adminPreviewLayer = null; }
   adminPendingData = null;
   closeAllSheets();
@@ -1961,15 +1974,16 @@ async function adminConfirm(hit) {
   const label = (hit ? '✓ Hit' : '✗ Miss') + ' — ' + name;
   if (hit) {
     await addZone(s => {
-      const inv = invertedPolyLayer(latlngs, s);
+      const inv = adminInvertedLayer(geometry, s);
       if (inv) return inv;
-      const l = L.polygon(latlngs, {...s, color:'#3fbf6e', fillColor:'#3fbf6e'});
+      // Fallback: direct green polygon
+      const l = adminPolyLayer(geometry, {...s, color:'#3fbf6e', fillColor:'#3fbf6e'});
       l._isHit = true;
       return l;
     }, label);
   } else {
     await addZone(s => {
-      const l = L.polygon(latlngs, {...s, color:missColor, fillColor:missColor});
+      const l = adminPolyLayer(geometry, {...s, color:missColor, fillColor:missColor});
       l._isMiss = true;
       return l;
     }, label);
@@ -2064,7 +2078,9 @@ function fbRoomPath() { return `${fbPwHash}/${FB_ROOM}`; }
 function serializeZone(z) {
   const l = z.layer;
   let geo;
-  if (l._isInverted && l._origLatLngs) {
+  if (l._adminGeo) {
+    geo = {type: l._isInverted ? 'admin-inv' : 'admin', geometry: l._adminGeo};
+  } else if (l._isInverted && l._origLatLngs) {
     geo = {type:'poly-inv', latlngs: l._origLatLngs};
   } else if (l._isInverted) {
     geo = {type:'circle', center:{lat:l._origLat, lng:l._origLng}, radius:l._origRadius};
@@ -2080,7 +2096,15 @@ function serializeZone(z) {
 function deserializeZone(id, data) {
   const style = {color:missColor, weight:2, opacity:0.8, fillColor:missColor, fillOpacity:0.3};
   let layer;
-  if (data.isInverted && data.geo.type === 'poly-inv') {
+  if (data.geo.type === 'admin-inv') {
+    layer = adminInvertedLayer(data.geo.geometry, style);
+    if (!layer) layer = adminPolyLayer(data.geo.geometry, style);
+  } else if (data.geo.type === 'admin') {
+    const s = data.isHit ? {...style, color:'#3fbf6e', fillColor:'#3fbf6e'} : style;
+    layer = adminPolyLayer(data.geo.geometry, s);
+    if (data.isMiss) layer._isMiss = true;
+    if (data.isHit) layer._isHit = true;
+  } else if (data.isInverted && data.geo.type === 'poly-inv') {
     const pts = data.geo.latlngs.map(p => L.latLng(p[0], p[1]));
     layer = invertedPolyLayer(pts, style) || L.polygon(pts, style);
   } else if (data.isInverted) {
