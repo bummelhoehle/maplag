@@ -111,6 +111,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
 .sh-btn.hit{border-color:var(--green);background:var(--green-bg);color:var(--green)}
 .sh-btn.miss{border-color:var(--red);background:var(--red-bg);color:var(--red)}
 .sh-btn.ghost{background:transparent;border-color:var(--border);color:var(--text2);font-size:12px;padding:9px}
+.sh-btn.sel{border-color:var(--gold);color:var(--gold);background:rgba(232,184,75,.1)}
 .sh-input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:var(--r6);color:var(--text1);font-size:15px;padding:10px 12px;outline:none;transition:border-color .15s}
 .sh-input:focus{border-color:var(--gold)}
 .sh-label{font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;display:block}
@@ -162,7 +163,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
     height:auto;
     background:var(--bg1);
     display:grid;
-    grid-template-columns:repeat(5,1fr);
+    grid-template-columns:repeat(6,1fr);
     gap:4px;
   }
   /* Locate button left of search in top row */
@@ -236,6 +237,7 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
       <button class="tb-btn" data-mode="circ"><span class="tb-icon">◎</span><span class="tb-lbl">Radar</span></button>
       <button class="tb-btn" id="btn-thermo"><span class="tb-icon">🌡</span><span class="tb-lbl">Thermo</span></button>
       <button class="tb-btn" id="btn-measuring"><span class="tb-icon">📏</span><span class="tb-lbl">Measure</span></button>
+      <button class="tb-btn" id="btn-admin"><span class="tb-icon">◰</span><span class="tb-lbl">Area</span></button>
     </div>
     <div class="sep"></div>
     <button class="tb-btn" id="btn-locate" title="Center on my location"><span class="tb-icon">⊕</span><span class="tb-lbl">Locate</span></button>
@@ -418,6 +420,37 @@ body{background:var(--bg);color:var(--text1);font-family:-apple-system,BlinkMacS
   </div>
 </div>
 
+<!-- ADMIN AREA SHEET -->
+<div id="admin-sheet" class="bottom-sheet">
+  <div class="sheet-box">
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>◰ Area Zones</h3>
+      <button class="sheet-close" id="btn-admin-close">×</button>
+    </div>
+    <div class="sheet-body">
+      <div id="admin-level-select">
+        <span class="sh-label">Admin-Ebene wählen, dann Karte antippen</span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+          <button class="sh-btn" data-admin-zoom="4">🌍 Land</button>
+          <button class="sh-btn" data-admin-zoom="5">🏛 Bundesland</button>
+          <button class="sh-btn" data-admin-zoom="8">🏘 Landkreis</button>
+          <button class="sh-btn" data-admin-zoom="10">🏙 Stadt</button>
+        </div>
+        <div id="admin-loading" style="display:none;font-size:12px;color:var(--text2);text-align:center;padding:8px">Grenze wird geladen…</div>
+      </div>
+      <div id="admin-confirm" style="display:none">
+        <div id="admin-name" style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:14px;line-height:1.5"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <button id="btn-admin-hit" class="sh-btn hit" style="flex:1">✓ Hit — Hier</button>
+          <button id="btn-admin-miss" class="sh-btn miss" style="flex:1">✗ Miss — Nicht hier</button>
+        </div>
+        <button id="btn-admin-reselect" class="sh-btn ghost">↩ Neu wählen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="pw-modal" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:99999;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r14);padding:28px 24px;width:min(320px,92vw);box-shadow:0 16px 48px rgba(0,0,0,.7)">
     <div style="font-size:18px;font-weight:700;color:var(--gold);margin-bottom:6px">🔒 MapLag</div>
@@ -524,6 +557,9 @@ function setMissColor(c) {
 document.getElementById('miss-color-picker').addEventListener('input', e => setMissColor(e.target.value));
 const TYPE_LABELS={seeker:'Seeker',hider:'Hider',neutral:'Neutral',custom:'Custom'};
 const st={mode:'none',type:'hider',drawType:'miss',zones:[],selId:null,drawing:false,startLL:null,prevLayer:null,freePoints:[],freeLayer:null,pendCenter:null,labelCb:null};
+let adminPreviewLayer = null;
+let adminPendingData = null; // {name, latlngs}
+let adminZoom = 4;
 const zoneHistory = {};  // id → deleted zone (for inline undo)
 const thermoHistory = {}; // id → deleted thermo constraint (for inline undo)
 const _zoneOrder = [];   // IDs in Erstellungsreihenfolge — wird nie umsortiert
@@ -1010,6 +1046,10 @@ map.on('mouseup',async(e)=>{
 
 // Kreis-Mode: Popup sofort beim Aktivieren anzeigen
 map.on('click',async(e)=>{
+  if(st.mode==='admin'){
+    await adminFetchBoundary(e.latlng.lat, e.latlng.lng);
+    return;
+  }
   if(st.mode!=='circ')return;
   // Bereits durch mode-switch open, ignorieren
 });
@@ -1132,7 +1172,7 @@ const mc=map.getContainer();
 mc.addEventListener('touchstart',e=>{
   if(document.querySelector('.bottom-sheet.open'))return;
   if(document.getElementById('meas-sheet').classList.contains('open'))return;
-  if(st.mode==='none'||st.mode==='circ')return;
+  if(st.mode==='none'||st.mode==='circ'||st.mode==='admin')return;
   e.preventDefault();
   const ll=llFromTouch(e);if(!ll)return;
   if(st.mode==='free'){
@@ -1168,12 +1208,19 @@ mc.addEventListener('touchend',async e=>{
 
 
 // ── SHEET HELPER ──────────────────────────────────────────
-const SHEET_IDS = ['draw-sheet','radar-sheet','meas-sheet','thermo-panel','zone-panel'];
+const SHEET_IDS = ['draw-sheet','radar-sheet','meas-sheet','thermo-panel','zone-panel','admin-sheet'];
 function closeAllSheets() {
   SHEET_IDS.forEach(id => document.getElementById(id).classList.remove('open'));
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
   document.getElementById('btn-measuring').classList.remove('active');
   document.getElementById('btn-thermo').classList.remove('active');
+  document.getElementById('btn-admin').classList.remove('active');
+  if (adminPreviewLayer) { map.removeLayer(adminPreviewLayer); adminPreviewLayer = null; }
+  adminPendingData = null;
+  document.getElementById('admin-level-select').style.display = 'block';
+  document.getElementById('admin-confirm').style.display = 'none';
+  document.getElementById('admin-loading').style.display = 'none';
+  document.querySelectorAll('[data-admin-zoom]').forEach(b => b.classList.remove('sel'));
   tp.open = false;
   st.mode = 'none';
 }
@@ -1821,6 +1868,125 @@ const _measInterval = setInterval(() => {
   inp.addEventListener('keydown', e => { if (e.key === 'Escape') res.style.display = 'none'; });
   _searchDismissTargets.push({inp: inp, res: res});
 })();
+
+// ── ADMIN AREA ZONES ──────────────────────────────────────
+document.getElementById('btn-admin').addEventListener('click', () => {
+  const isOpen = document.getElementById('admin-sheet').classList.contains('open');
+  if (isOpen || st.mode === 'admin') {
+    closeAllSheets();
+  } else {
+    closeAllSheets();
+    document.getElementById('admin-sheet').classList.add('open');
+    document.getElementById('btn-admin').classList.add('active');
+  }
+});
+
+document.getElementById('btn-admin-close').addEventListener('click', closeAllSheets);
+document.getElementById('admin-sheet').addEventListener('click', function(e) {
+  if (e.target === this) closeAllSheets();
+});
+
+document.querySelectorAll('[data-admin-zoom]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    adminZoom = parseInt(btn.dataset.adminZoom);
+    document.querySelectorAll('[data-admin-zoom]').forEach(b => b.classList.remove('sel'));
+    btn.classList.add('sel');
+    // Close sheet, enter click mode
+    document.getElementById('admin-sheet').classList.remove('open');
+    st.mode = 'admin';
+    document.getElementById('btn-admin').classList.add('active');
+    tip('Karte antippen um Gebiet zu wählen', 5000);
+  });
+});
+
+function geoToMainRing(geometry) {
+  if (geometry.type === 'Polygon') {
+    return geometry.coordinates[0].map(c => L.latLng(c[1], c[0]));
+  } else if (geometry.type === 'MultiPolygon') {
+    // Take largest polygon by coordinate count
+    const largest = geometry.coordinates.reduce((a, b) =>
+      a[0].length > b[0].length ? a : b
+    );
+    return largest[0].map(c => L.latLng(c[1], c[0]));
+  }
+  return null;
+}
+
+async function adminFetchBoundary(lat, lng) {
+  // Show loading state
+  document.getElementById('admin-level-select').style.display = 'block';
+  document.getElementById('admin-confirm').style.display = 'none';
+  document.getElementById('admin-loading').style.display = 'block';
+  document.getElementById('admin-sheet').classList.add('open');
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&polygon_geojson=1&zoom=${adminZoom}`;
+    const data = await fetch(url, {headers: {'Accept-Language': mapLang === 'local' ? '' : mapLang}}).then(r => r.json());
+
+    if (!data.geojson) { tip('Keine Grenze gefunden'); document.getElementById('admin-loading').style.display = 'none'; return; }
+
+    const latlngs = geoToMainRing(data.geojson);
+    if (!latlngs || latlngs.length < 3) { tip('Grenze nicht darstellbar'); document.getElementById('admin-loading').style.display = 'none'; return; }
+
+    if (adminPreviewLayer) { map.removeLayer(adminPreviewLayer); }
+    adminPreviewLayer = L.polygon(latlngs, {
+      color: '#e8b84b', weight: 2.5, opacity: 0.9,
+      fillColor: '#e8b84b', fillOpacity: 0.15, dashArray: '6 4'
+    }).addTo(map);
+
+    const shortName = data.address
+      ? (data.address.country || data.address.state || data.address.county || data.address.city || data.name || data.display_name.split(',')[0])
+      : data.display_name.split(',')[0];
+    adminPendingData = {name: shortName, fullName: data.display_name, latlngs};
+
+    document.getElementById('admin-name').textContent = shortName;
+    document.getElementById('admin-loading').style.display = 'none';
+    document.getElementById('admin-level-select').style.display = 'none';
+    document.getElementById('admin-confirm').style.display = 'block';
+
+    map.fitBounds(adminPreviewLayer.getBounds(), {padding: [40, 40]});
+  } catch(err) {
+    tip('Fehler beim Laden der Grenze');
+    document.getElementById('admin-loading').style.display = 'none';
+  }
+}
+
+async function adminConfirm(hit) {
+  if (!adminPendingData) return;
+  const {name, latlngs} = adminPendingData;
+  if (adminPreviewLayer) { map.removeLayer(adminPreviewLayer); adminPreviewLayer = null; }
+  adminPendingData = null;
+  closeAllSheets();
+
+  const label = (hit ? '✓ Hit' : '✗ Miss') + ' — ' + name;
+  if (hit) {
+    await addZone(s => {
+      const inv = invertedPolyLayer(latlngs, s);
+      if (inv) return inv;
+      const l = L.polygon(latlngs, {...s, color:'#3fbf6e', fillColor:'#3fbf6e'});
+      l._isHit = true;
+      return l;
+    }, label);
+  } else {
+    await addZone(s => {
+      const l = L.polygon(latlngs, {...s, color:missColor, fillColor:missColor});
+      l._isMiss = true;
+      return l;
+    }, label);
+  }
+}
+
+document.getElementById('btn-admin-hit').addEventListener('click', () => adminConfirm(true));
+document.getElementById('btn-admin-miss').addEventListener('click', () => adminConfirm(false));
+document.getElementById('btn-admin-reselect').addEventListener('click', () => {
+  if (adminPreviewLayer) { map.removeLayer(adminPreviewLayer); adminPreviewLayer = null; }
+  adminPendingData = null;
+  document.getElementById('admin-confirm').style.display = 'none';
+  document.getElementById('admin-level-select').style.display = 'block';
+  document.getElementById('admin-sheet').classList.remove('open');
+  st.mode = 'admin';
+  tip('Karte antippen um Gebiet zu wählen', 5000);
+});
 
 // ── UNITS (metric / imperial) ─────────────────────────────
 
