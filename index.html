@@ -542,12 +542,13 @@ document.getElementById('btn-thermo-close').addEventListener('click', () => {
 const COLORS={seeker:{fill:'#f85149',stroke:'#f85149'},hider:{fill:'#58a6ff',stroke:'#58a6ff'},neutral:{fill:'#3fb950',stroke:'#3fb950'},custom:{fill:'#d29922',stroke:'#d29922'}};
 const MODE_LABELS={move:'Pan',free:'Draw',circ:'Radar'};
 let missColor = localStorage.getItem('missColor') || '#f85149';
+let mergedMissLayer = null;
 function setMissColor(c) {
   missColor = c;
   localStorage.setItem('missColor', c);
   const picker = document.getElementById('miss-color-picker');
   if (picker) picker.value = c;
-  // Alle bestehenden Miss-Zonen auf der Karte umfärben
+  if (mergedMissLayer) mergedMissLayer.setStyle({color: c, fillColor: c});
   st.zones.forEach(z => {
     if (z.layer && (z.layer._isMiss || z.layer._isInverted)) {
       z.layer.setStyle({color: c, fillColor: c});
@@ -558,7 +559,7 @@ document.getElementById('miss-color-picker').addEventListener('input', e => setM
 const TYPE_LABELS={seeker:'Seeker',hider:'Hider',neutral:'Neutral',custom:'Custom'};
 const st={mode:'none',type:'hider',drawType:'miss',zones:[],selId:null,drawing:false,startLL:null,prevLayer:null,freePoints:[],freeLayer:null,pendCenter:null,labelCb:null};
 let adminPreviewLayer = null;
-let adminPendingData = null; // {name, latlngs}
+let adminPendingData = null; // {name, geometry}
 let adminZoom = 4;
 const zoneHistory = {};  // id → deleted zone (for inline undo)
 const thermoHistory = {}; // id → deleted thermo constraint (for inline undo)
@@ -870,6 +871,78 @@ function layerToTurf(layer) {
   } catch(e) { return null; }
 }
 
+function getMissTurfFeature(layer) {
+  if (!layer._isMiss || layer._isInverted) return null;
+  try {
+    if (layer._adminGeo) return turf.feature(layer._adminGeo);
+    return layerToTurf(layer);
+  } catch(e) { return null; }
+}
+
+function getHitAreaFeature(layer) {
+  if (!layer._isInverted) return null;
+  try {
+    if (layer._adminGeo) return turf.feature(layer._adminGeo);
+    if (layer._origRadius !== undefined)
+      return turf.circle([layer._origLng, layer._origLat], layer._origRadius/1000, {steps:64, units:'kilometers'});
+    if (layer._origLatLngs) {
+      const coords = layer._origLatLngs.map(p => [p[1], p[0]]); // [lat,lng]→[lng,lat]
+      if (coords[0][0] !== coords[coords.length-1][0] || coords[0][1] !== coords[coords.length-1][1]) coords.push(coords[0]);
+      return turf.polygon([coords]);
+    }
+  } catch(e) {}
+  return null;
+}
+
+function renderEliminatedArea() {
+  if (mergedMissLayer) { map.removeLayer(mergedMissLayer); mergedMissLayer = null; }
+
+  const missZones     = st.zones.filter(z => z.layer && z.layer._isMiss && !z.layer._isInverted);
+  const invertedZones = st.zones.filter(z => z.layer && z.layer._isInverted);
+
+  // Ensure no individual eliminated layers linger on the map
+  [...missZones, ...invertedZones].forEach(z => { if (map.hasLayer(z.layer)) map.removeLayer(z.layer); });
+
+  if (!missZones.length && !invertedZones.length) return;
+
+  try {
+    const world = turf.polygon([[[-180,-85],[180,-85],[180,85],[-180,85],[-180,-85]]]);
+
+    // Step 1: union all hit areas — each zone adds possible area (OR semantics)
+    let hitUnion = null;
+    for (const z of invertedZones) {
+      const hit = getHitAreaFeature(z.layer);
+      if (!hit) continue;
+      hitUnion = hitUnion ? turf.union(hitUnion, hit) : hit;
+    }
+
+    // Step 2: union all miss areas
+    let missUnion = null;
+    for (const z of missZones) {
+      const miss = getMissTurfFeature(z.layer);
+      if (!miss) continue;
+      missUnion = missUnion ? turf.union(missUnion, miss) : miss;
+    }
+
+    // Step 3: compute eliminated area
+    let eliminated;
+    if (hitUnion) {
+      // Has hit zones: eliminated = world - (hitUnion - misses)
+      let remaining = missUnion ? (turf.difference(hitUnion, missUnion) || null) : hitUnion;
+      eliminated = remaining ? (turf.difference(world, remaining) || null) : world;
+    } else {
+      // Only miss zones: eliminated = missUnion directly (avoids double-difference)
+      eliminated = missUnion;
+    }
+    if (!eliminated) return;
+
+    mergedMissLayer = L.geoJSON(eliminated, {
+      style: {color: missColor, weight: 2, opacity: 0.85, fillColor: missColor, fillOpacity: 0.3},
+      interactive: false
+    }).addTo(map);
+  } catch(e) { console.error('renderEliminatedArea:', e); }
+}
+
 function bindLayerEvents(layer, id) {
   layer.on('click', e => { L.DomEvent.stopPropagation(e); });
   layer.on('mousedown mouseup mousemove touchstart touchmove touchend', e => {
@@ -905,7 +978,8 @@ async function addZone(mkLayer, def, askName=false) {
     layer = mkLayer({ color:missColor, weight:2, opacity:0.8, fillColor:missColor, fillOpacity:0.3 });
     layer._isMiss = true;
   }
-  layer.addTo(map);
+  // Miss + inverted zones live only in data — rendered as one unified layer
+  if (layer._isHit && !layer._isInverted) layer.addTo(map);
   bindLayerEvents(layer, id);
   st.zones.push({id, lbl, type: st.type, layer});
   if (!_zoneOrder.includes(id)) _zoneOrder.push(id);
@@ -938,7 +1012,12 @@ function undoZone(id){
   renderList();
 }
 
-function renderList(){ renderZonePanel(); }
+let _renderTimer = null;
+function renderList() {
+  renderZonePanel();
+  clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(renderEliminatedArea, 120);
+}
 
 document.querySelectorAll('[data-mode]').forEach(b=>{
   b.addEventListener('click',()=>{
@@ -1938,7 +2017,12 @@ async function adminFetchBoundary(lat, lng) {
     const data = await fetch(url, {headers: {'Accept-Language': mapLang === 'local' ? '' : mapLang}}).then(r => r.json());
 
     if (!data.geojson) { tip('Keine Grenze gefunden'); document.getElementById('admin-loading').style.display = 'none'; return; }
-    const geo = data.geojson;
+    // Simplify high-vertex admin boundaries for performance
+    let geo = data.geojson;
+    try {
+      const simplified = turf.simplify(turf.feature(geo), {tolerance: 0.005, highQuality: false});
+      if (simplified && simplified.geometry) geo = simplified.geometry;
+    } catch(e) {};
     if (!geo.coordinates || !geo.coordinates.length) { tip('Grenze nicht darstellbar'); document.getElementById('admin-loading').style.display = 'none'; return; }
 
     if (adminPreviewLayer) { map.removeLayer(adminPreviewLayer); }
@@ -2097,11 +2181,13 @@ function deserializeZone(id, data) {
   const style = {color:missColor, weight:2, opacity:0.8, fillColor:missColor, fillOpacity:0.3};
   let layer;
   if (data.geo.type === 'admin-inv') {
-    layer = adminInvertedLayer(data.geo.geometry, style);
-    if (!layer) layer = adminPolyLayer(data.geo.geometry, style);
+    layer = L.polygon([], style);
+    layer._isInverted = true;
+    layer._adminGeo = data.geo.geometry;
   } else if (data.geo.type === 'admin') {
     const s = data.isHit ? {...style, color:'#3fbf6e', fillColor:'#3fbf6e'} : style;
-    layer = adminPolyLayer(data.geo.geometry, s);
+    layer = L.polygon([], s);
+    layer._adminGeo = data.geo.geometry;
     if (data.isMiss) layer._isMiss = true;
     if (data.isHit) layer._isHit = true;
   } else if (data.isInverted && data.geo.type === 'poly-inv') {
@@ -2121,7 +2207,7 @@ function deserializeZone(id, data) {
     layer = L.polygon(data.geo.latlngs, style);
     layer._isMiss = true;
   }
-  layer.addTo(map);
+  if (data.isHit && !data.isInverted) layer.addTo(map);
   bindLayerEvents(layer, id);
   st.zones.push({id, lbl:data.lbl, layer});
 }
@@ -2169,7 +2255,7 @@ function fbListen() {
           const cleanData = {...zd}; delete cleanData.deleted;
           zoneHistory[id] = {id, lbl: zd.lbl, fbData: cleanData};
         } else {
-          deserializeZone(id, zd);
+          try { deserializeZone(id, zd); } catch(e) { console.error('deserializeZone', id, e); }
         }
       });
 
