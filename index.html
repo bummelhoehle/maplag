@@ -575,6 +575,12 @@ const tileProvidersDefault = [
     opts: { attribution: '&copy; OpenStreetMap', subdomains: 'abc', maxZoom: 19 }
   }
 ];
+const tileProvidersSatellite = [
+  {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    opts: { attribution: '&copy; Esri &copy; USGS &copy; USDA', maxZoom: 19 }
+  }
+];
 // Language-specific tile overrides (prepended when lang is set)
 const tileProvidersLang = {
   de: [{ url: 'https://tile.openstreetmap.de/{z}/{x}/{y}.png', opts: { attribution: '&copy; OpenStreetMap DE', maxZoom: 19 } }],
@@ -584,18 +590,24 @@ const tileProvidersLang = {
 let mapLang = localStorage.getItem('mapLang') || 'de';
 
 const mapThemeStates = [
-  { key: 'default', providers: tileProvidersDefault, icon: '🗺',  lbl: 'Map' },
-  { key: 'light',   providers: tileProvidersLight,   icon: '🌕', lbl: 'Light map' },
-  { key: 'dark',    providers: tileProvidersDark,    icon: '🌑', lbl: 'Dark map' },
+  { key: 'default',   providers: tileProvidersDefault,   icon: '🗺', lbl: 'Map' },
+  { key: 'light',     providers: tileProvidersLight,     icon: '🌕', lbl: 'Light map' },
+  { key: 'dark',      providers: tileProvidersDark,      icon: '🌑', lbl: 'Dark map' },
+  { key: 'satellite', providers: tileProvidersSatellite, icon: '🛰', lbl: 'Satellite', noLang: true },
+  { key: 'hybrid',    providers: tileProvidersSatellite, icon: '🌍', lbl: 'Hybrid',    noLang: true,
+    labelUrl: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png',
+    labelOpts: { attribution: '', subdomains: 'abcd', maxZoom: 20, opacity: 0.9 }
+  },
 ];
 let mapThemeIdx = (() => { const i = mapThemeStates.findIndex(s => s.key === (localStorage.getItem('mapTheme') || 'default')); return i < 0 ? 0 : i; })();
 let tileProviders = mapThemeStates[mapThemeIdx].providers;
 
 let currentTile = null;
+let labelTile = null;
 
 function getActiveTileProviders() {
-  // Lang tiles only for default theme — light/dark have their own distinct style
-  const langTiles = mapThemeStates[mapThemeIdx].key === 'default' ? (tileProvidersLang[mapLang] || []) : [];
+  const s = mapThemeStates[mapThemeIdx];
+  const langTiles = (!s.noLang && s.key === 'default') ? (tileProvidersLang[mapLang] || []) : [];
   return [...langTiles, ...tileProviders];
 }
 
@@ -603,7 +615,11 @@ function applyMapTheme(i) {
   mapThemeIdx = i;
   const s = mapThemeStates[mapThemeIdx];
   tileProviders = s.providers;
+  if (labelTile) { map.removeLayer(labelTile); labelTile = null; }
   loadTiles(0);
+  if (s.labelUrl) {
+    labelTile = L.tileLayer(s.labelUrl, s.labelOpts).addTo(map);
+  }
   const btn = document.getElementById('btn-map-theme');
   if (btn) { btn.textContent = s.icon; btn.title = s.lbl; }
   localStorage.setItem('mapTheme', s.key);
@@ -625,6 +641,10 @@ function loadTiles(idx) {
   });
 }
 loadTiles(0);
+// Restore label layer if starting in hybrid mode
+if (mapThemeStates[mapThemeIdx].labelUrl) {
+  labelTile = L.tileLayer(mapThemeStates[mapThemeIdx].labelUrl, mapThemeStates[mapThemeIdx].labelOpts).addTo(map);
+}
 
 // ÖPNV overlay layer
 let opnvLayer = null;
@@ -636,11 +656,10 @@ function toggleOpnv() {
   if (opnvVisible) {
     if (!opnvLayer) {
       // OpenRailwayMap — funktioniert ohne CORS-Probleme
-      opnvLayer = L.tileLayer('https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://openrailwaymap.org">OpenRailwayMap</a> &copy; OpenStreetMap',
-        subdomains: 'abc',
-        maxZoom: 19,
-        opacity: 1.0,
+      opnvLayer = L.tileLayer('https://tile.memomaps.de/tilegen/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://opnvkarte.de">ÖPNVKarte</a> &copy; OpenStreetMap',
+        maxZoom: 18,
+        opacity: 0.9,
       });
     }
     opnvLayer.addTo(map);
@@ -660,7 +679,7 @@ const TransitControl = L.Control.extend({
     const btn = L.DomUtil.create('button','leaflet-bar leaflet-control units-ctrl');
     btn.id = 'btn-opnv';
     btn.textContent = '🚌';
-    btn.title = 'Toggle transit layer';
+    btn.title = 'Toggle ÖPNV layer';
     L.DomEvent.disableClickPropagation(btn);
     L.DomEvent.on(btn, 'click', toggleOpnv);
     return btn;
